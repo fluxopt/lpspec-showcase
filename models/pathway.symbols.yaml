@@ -1,0 +1,28 @@
+# How models/pathway.yaml prints. Not a model, so nothing here is checked
+# against the schema; every key is checked against the model it names, so a
+# symbol that applies to nothing is a load error rather than a silent miss.
+#
+# One letter per role: c for a unit cost, C for its total, x for capacity in
+# its three states, E for emissions and the cap that bounds them.
+
+notation: latex
+
+dimensions:
+  day: {index: d, set: "\\mathcal{D}"}
+  hour: {index: h, set: "\\mathcal{H}"}
+  generator: {index: g, set: "\\mathcal{G}"}
+
+names:
+  weight: w
+  load: "\\ell"
+  avail: a
+  invest: "c^{\\mathrm{inv}}"
+  cost: "c^{\\mathrm{var}}"
+  rate: e
+  cap: "E^{\\max}"
+  existing: "x^{0}"
+  build: "x^{+}"
+  total: x
+  capex: "C^{\\mathrm{inv}}"
+  opex: "C^{\\mathrm{var}}"
+  emissions: E

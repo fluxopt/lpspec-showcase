@@ -110,7 +110,9 @@ every input re-runs only the cells that depend on it.
 
 A second loader, [`site/src/model.md.py`](site/src/model.md.py), prints a
 whole page: the spec out of the archive, typeset as equations by the
-language's own `to_markdown`. It imports [math-spec](https://github.com/energy-models/math-spec),
+language's own `to_markdown`, in the notation
+[`models/pathway.symbols.yaml`](models/pathway.symbols.yaml) declares. A
+symbol that names nothing in the model fails the build. It imports [math-spec](https://github.com/energy-models/math-spec),
 the language package, which has no solver in it. No data binds and nothing is
 solved to produce that page, so the math it shows is exactly what the YAML
 states, and the other pages show what the solver made of it.

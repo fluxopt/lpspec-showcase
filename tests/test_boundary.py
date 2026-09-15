@@ -73,3 +73,4 @@ def test_the_model_page_typesets_what_was_solved(runs: Path):
     assert '${tex`\\mathcal{G}`}' in page, 'a symbol in the legend is inline TeX'
     assert '```math' not in page and '$`' not in page, "none of GitHub's delimiters survive"
     assert 'accumulate' in page and 'existing' in page, 'the constraint that carries the fleet is printed'
+    assert 'x^{0}' in page and 'E^{\\max}' in page, 'the symbol table is applied, not the derived names'
