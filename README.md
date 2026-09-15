@@ -1,7 +1,7 @@
 # lpspec-showcase
 
-A capacity-expansion planner built on [lpspec](https://github.com/fluxopt/lpspec),
-shaped the way a production application is: a **solve job** that writes
+An example of what you build on [lpspec](https://github.com/fluxopt/lpspec):
+a capacity-expansion planner, shaped the way a production application is: a **solve job** that writes
 archives, an **archive directory** that is the contract between the halves, and
 an **interactive site** that reads the archives in the browser and never
 imports lpspec. GitHub Actions runs the job and publishes the site to GitHub

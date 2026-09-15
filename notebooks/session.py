@@ -60,6 +60,20 @@ def _(ready):
 
 @app.cell(hide_code=True)
 def _(mo):
+    mo.callout(
+        mo.md(
+            'An example of what you build on [lpspec](https://github.com/fluxopt/lpspec): a modelling session where the '
+            'model is a document, the data is a table, and every answer is a table too. lpspec runs unchanged, here in '
+            'your browser or on a machine of your own. '
+            '[The source](https://github.com/fluxopt/lpspec-showcase/blob/main/notebooks/session.py) is one file.'
+        ),
+        kind='info',
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
     mo.md(
         r"""
         # A modelling session on lpspec
