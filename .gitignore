@@ -13,3 +13,5 @@ site/dist/
 site/src/.observablehq/cache/
 # The executed notebook the site embeds; `marimo export html` writes it.
 site/src/session.html
+# marimo's per-notebook session cache.
+notebooks/__marimo__/
