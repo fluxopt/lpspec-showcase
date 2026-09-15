@@ -69,6 +69,16 @@ def _(ready):
 
 
 @app.cell(hide_code=True)
+def _(alt):
+    # The site's palette (site/src/components/palette.js): one hue per technology, fixed whatever else is on screen.
+    hues = {'gas': '#2a78d6', 'biomass': '#eb6834', 'wind': '#1baf7a', 'solar': '#eda100'}
+    by_technology = alt.Color(
+        'generator:N', scale=alt.Scale(domain=list(hues), range=list(hues.values())), title='technology'
+    )
+    return (by_technology,)
+
+
+@app.cell(hide_code=True)
 def _(mo):
     mo.callout(
         mo.md(
@@ -236,14 +246,14 @@ def _(lps, mo, model, sources, spec):
 
 
 @app.cell
-def _(alt, mo, result):
+def _(alt, by_technology, mo, result):
     if result is not None and result.has_primal:
         output = result.primal('p')
         price = result.dual('balance')
         dispatch = (
             alt.Chart(output)
             .mark_area()
-            .encode(x=alt.X('snapshot:Q', title='hour'), y=alt.Y('value:Q', title='MW'), color=alt.Color('generator:N'))
+            .encode(x=alt.X('snapshot:Q', title='hour'), y=alt.Y('value:Q', title='MW'), color=by_technology)
             .properties(width=380, height=220, title='Output by hour')
         )
         prices = (
@@ -309,11 +319,11 @@ def _(cap_2045, lps, pathway_text, solar_factor):
 
 
 @app.cell
-def _(alt, mo, runs):
+def _(alt, by_technology, mo, runs):
     fleet = (
         alt.Chart(runs.primal('total'))
         .mark_bar()
-        .encode(x=alt.X('year:O', title='period'), y=alt.Y('value:Q', title='MW standing'), color='generator:N')
+        .encode(x=alt.X('year:O', title='period'), y=alt.Y('value:Q', title='MW standing'), color=by_technology)
         .properties(width=380, height=220, title='Standing capacity after each period')
     )
     emitted = (
