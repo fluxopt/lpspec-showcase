@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+.ruff_cache/
+.pytest_cache/
+# What the solve job writes and the dashboard reads; regenerate with `showcase-solve`.
+runs/

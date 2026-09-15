@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --all-extras --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest
+      # The two processes, end to end: the job writes, the dashboard reads.
+      - run: uv run showcase-solve --runs runs
+      - run: SHOWCASE_RUNS=runs uv run python -c "from streamlit.testing.v1 import AppTest; at = AppTest.from_file('src/showcase/dashboard.py', default_timeout=120).run(); assert not at.exception, at.exception"

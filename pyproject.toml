@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lpspec-showcase"
+version = "0.1.0"
+description = "A capacity-expansion planner on lpspec: a solve job, an archive directory, and a dashboard that reads it."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Felix Bumann", email = "felixbumann387@gmail.com" }]
+# What the dashboard process needs, and nothing the solve job does.
+dependencies = [
+    "duckdb>=1.3",
+    "plotly>=6",
+    "polars>=1.30",
+    "streamlit>=1.45",
+]
+
+[project.optional-dependencies]
+# What the solve job needs on top. lpspec is not on PyPI yet, so the pin is a git tag.
+solve = ["lpspec @ git+https://github.com/fluxopt/lpspec@v0.0.1-alpha.332"]
+
+[project.scripts]
+showcase-solve = "showcase.solve:main"
+
+[project.urls]
+repository = "https://github.com/fluxopt/lpspec-showcase"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.12"]
+
+[tool.hatch.metadata]
+# The `solve` extra is a git tag, which a wheel's metadata may not carry without this.
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/showcase"]
+
+[tool.pytest.ini_options]
+pythonpath = ["tests"]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "N", "UP", "SIM", "RUF", "C4", "PIE", "RET", "T20"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "single"
