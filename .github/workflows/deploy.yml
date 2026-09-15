@@ -36,6 +36,7 @@ jobs:
           cache-dependency-path: site/package-lock.json
       - run: uv sync --all-extras --locked
       - run: uv run showcase-solve --runs runs
+      - run: uv run marimo export html notebooks/session.py -o site/src/session.html
       - run: npm ci
         working-directory: site
       - run: npm run build

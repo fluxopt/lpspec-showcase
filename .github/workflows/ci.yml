@@ -28,6 +28,7 @@ jobs:
       - run: uv run pytest
       # The two halves, end to end: the job writes the archives, the site builds from them.
       - run: uv run showcase-solve --runs runs
+      - run: uv run marimo export html notebooks/session.py -o site/src/session.html
       - run: npm ci
         working-directory: site
       - run: npm run build

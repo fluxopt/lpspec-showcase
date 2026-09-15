@@ -11,6 +11,7 @@ export default {
     {name: "Dispatch", path: "/dispatch"},
     {name: "Explore", path: "/explore"},
     {name: "Provenance", path: "/provenance"},
+    {name: "Session", path: "/session"},
   ],
   interpreters: {
     ".py": ["uv", "run", "--project", "..", "python"],

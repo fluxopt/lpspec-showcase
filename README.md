@@ -29,6 +29,7 @@ lpspec is not on PyPI yet, so the `solve` extra pins it to a git tag.
 ```bash
 uv sync --all-extras
 uv run showcase-solve --runs runs       # four scenarios, four periods each, a few seconds
+uv run marimo export html notebooks/session.py -o site/src/session.html
 cd site && npm ci && npm run dev        # the site, live, with the loader re-run on edit
 ```
 
@@ -130,6 +131,23 @@ the colour and the filters, and plots. Point the solve job at a different
 lpspec model and that page shows it unchanged. That is the property this
 repository exists to demonstrate.
 
+## The modelling session
+
+The site is what lpspec produces unattended. [`notebooks/session.py`](notebooks/session.py)
+is the other half: a [marimo](https://marimo.io) notebook in which the model
+is a document you edit by hand. A dispatch model sits in a code cell; change
+it and the typeset math, the validation and the solve all re-run, because
+every cell that reads it depends on it. A data editor changes the cost table,
+and two sliders re-solve the pathway with a different cap and solar cost.
+
+```bash
+uv run marimo edit notebooks/session.py
+```
+
+The site's **Session** page embeds the notebook as it ran at the last build,
+outputs included and controls inert, so the story is readable without a
+kernel. `marimo export html` writes that file in CI before the site builds.
+
 ## What the checks say
 
 `uv run pytest` solves two scenarios into a temporary directory and asserts:
@@ -140,7 +158,8 @@ repository exists to demonstrate.
   tree, and name `invest` as the one input `cheap_solar` changed;
 - nothing past the solve job imports lpspec; the site's data loader ships every
   table the pages read, or says what is missing; and the model page prints the
-  archived spec as TeX in the site's own delimiters.
+  archived spec as TeX in the site's own delimiters;
+- the notebook runs top to bottom and exports with both solves optimal.
 
 CI runs the same, then the pipeline end to end: the job, then the site build.
 A push to `main` also deploys the site to GitHub Pages.
