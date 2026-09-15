@@ -108,8 +108,15 @@ its front matter and queries them with SQL, run by DuckDB-WASM in the
 browser; the charts are [Observable Plot](https://observablehq.com/plot/), and
 every input re-runs only the cells that depend on it.
 
+A second loader, [`site/src/model.md.py`](site/src/model.md.py), prints a
+whole page: the spec out of the archive, typeset as equations by the
+language's own `to_markdown`. It imports [math-spec](https://github.com/energy-models/math-spec),
+the language package, which has no solver in it. No data binds and nothing is
+solved to produce that page, so the math it shows is exactly what the YAML
+states, and the other pages show what the solver made of it.
+
 Three pages know the model by name, because they tell its story: the pathway,
-one day's dispatch, provenance. The fourth, **Explore**, knows nothing. It lists
+one day's dispatch, provenance. **Explore** knows nothing. It lists
 every quantity in the catalogue, offers the dimensions it finds as the axis,
 the colour and the filters, and plots. Point the solve job at a different
 lpspec model and that page shows it unchanged. That is the property this
@@ -123,8 +130,9 @@ repository exists to demonstrate.
   each period started from the fleet the last one left;
 - the warehouse queries name the run on every row, list the catalogue from the
   tree, and name `invest` as the one input `cheap_solar` changed;
-- nothing past the solve job imports lpspec, and the site's loader ships every
-  table the pages read, or says what is missing.
+- nothing past the solve job imports lpspec; the site's data loader ships every
+  table the pages read, or says what is missing; and the model page prints the
+  archived spec as TeX in the site's own delimiters.
 
 CI runs the same, then the pipeline end to end: the job, then the site build.
 A push to `main` also deploys the site to GitHub Pages.

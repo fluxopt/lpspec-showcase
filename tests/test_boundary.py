@@ -11,7 +11,8 @@ import pytest
 
 ROOT = Path(__file__).parents[1]
 LOADER = ROOT / 'site' / 'src' / 'data' / 'runs.zip.py'
-READERS = [ROOT / 'src' / 'showcase' / 'warehouse.py', LOADER]
+MODEL_PAGE = ROOT / 'site' / 'src' / 'model.md.py'
+READERS = [ROOT / 'src' / 'showcase' / 'warehouse.py', LOADER, MODEL_PAGE]
 
 
 def imported_by(module: Path) -> set[str]:
@@ -56,3 +57,19 @@ def test_the_loader_says_when_there_is_nothing_to_read(tmp_path: Path):
     )
     assert done.returncode != 0
     assert b'holds no archive' in done.stderr
+
+
+def test_the_model_page_typesets_what_was_solved(runs: Path):
+    """The page loader prints the archive's spec as math, in the site's own delimiters rather than GitHub's."""
+    done = subprocess.run(
+        [sys.executable, str(MODEL_PAGE)],
+        env={**os.environ, 'SHOWCASE_RUNS': str(runs)},
+        capture_output=True,
+        check=True,
+    )
+    page = done.stdout.decode()
+    assert page.startswith('---\ntitle: Model\n---'), 'a page loader prints front matter first'
+    assert '```tex\n\\min' in page, 'the objective is a TeX block'
+    assert '${tex`\\mathcal{G}`}' in page, 'a symbol in the legend is inline TeX'
+    assert '```math' not in page and '$`' not in page, "none of GitHub's delimiters survive"
+    assert 'accumulate' in page and 'existing' in page, 'the constraint that carries the fleet is printed'

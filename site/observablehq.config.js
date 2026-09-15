@@ -7,6 +7,7 @@ export default {
   theme: "dashboard",
   toc: false,
   pages: [
+    {name: "Model", path: "/model"},
     {name: "Dispatch", path: "/dispatch"},
     {name: "Explore", path: "/explore"},
     {name: "Provenance", path: "/provenance"},
