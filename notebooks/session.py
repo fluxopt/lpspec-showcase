@@ -32,14 +32,14 @@ async def _():
         pathway_text = await (await pyfetch('./models/pathway.yaml')).string()
 
         # polars' browser build has no streaming engine, which lpspec asks for when it collects.
-        import polars as pl
+        import polars as _pl
 
-        collect = pl.LazyFrame.collect
+        _collect = _pl.LazyFrame.collect
 
-        def collect_in_memory(self, *args, engine='auto', **kwargs):
-            return collect(self, *args, engine='in-memory' if engine == 'streaming' else engine, **kwargs)
+        def _collect_in_memory(self, *args, engine='auto', **kwargs):
+            return _collect(self, *args, engine='in-memory' if engine == 'streaming' else engine, **kwargs)
 
-        pl.LazyFrame.collect = collect_in_memory
+        _pl.LazyFrame.collect = _collect_in_memory
     ready = True
     return pathway_text, ready
 
