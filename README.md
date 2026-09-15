@@ -2,30 +2,34 @@
 
 A capacity-expansion planner built on [lpspec](https://github.com/fluxopt/lpspec),
 shaped the way a production application is: a **solve job** that writes
-archives, an **archive directory** that is the contract between the two halves,
-and a **dashboard** that reads the archives and never imports lpspec.
+archives, an **archive directory** that is the contract between the halves, and
+an **interactive site** that reads the archives in the browser and never
+imports lpspec. GitHub Actions runs the job and publishes the site to GitHub
+Pages, so there is no server anywhere.
+
+**Live:** <https://fluxopt.github.io/lpspec-showcase/>
 
 ```text
-showcase-solve ──▶ runs/<scenario>/ ──▶ streamlit dashboard
-   (lpspec)          (parquet + yaml)        (duckdb + plotly)
+showcase-solve ──▶ runs/<scenario>/ ──▶ observable build ──▶ GitHub Pages
+   (lpspec)          (parquet + yaml)      (one Python loader)   (DuckDB-WASM + Plot)
 ```
 
 The point of the repository is the middle box. lpspec archives a solve as tidy
 parquet: one file per variable, dual and named expression, keyed by the model's
 own dimensions, with a `value` column. A directory of archives is therefore a
-table per glob, and anything that reads parquet is already a client. The
-dashboard here is one such client. So is a DuckDB shell, a notebook, or a BI
-tool pointed at the same directory.
+table per glob, and anything that reads parquet is already a client. The site
+is one such client. So is a DuckDB shell, a notebook, or a BI tool pointed at
+the same directory.
 
 ## Run it
 
-Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). lpspec is not on
-PyPI yet, so the `solve` extra pins it to a git tag.
+Requires Python 3.12, [uv](https://docs.astral.sh/uv/) and Node 20 or later.
+lpspec is not on PyPI yet, so the `solve` extra pins it to a git tag.
 
 ```bash
 uv sync --all-extras
-uv run showcase-solve --runs runs           # four scenarios, four periods each, a few seconds
-SHOWCASE_RUNS=runs uv run streamlit run src/showcase/dashboard.py
+uv run showcase-solve --runs runs       # four scenarios, four periods each, a few seconds
+cd site && npm ci && npm run dev        # the site, live, with the loader re-run on edit
 ```
 
 `showcase-solve base` solves one scenario. An archive is written whole, so a
@@ -43,8 +47,7 @@ driver.
 
 The file also names three expressions, `capex`, `opex` and `emissions`, and a
 `carbon` constraint over the last of them. Naming a quantity once means the
-number the constraint bounds and the number the dashboard plots are one
-definition.
+number the constraint bounds and the number the site plots are one definition.
 
 Four scenarios live in [`src/showcase/scenarios.py`](src/showcase/scenarios.py),
 each a function that returns the model's sources. Only data differs:
@@ -75,7 +78,8 @@ runs/base/
 ```
 
 Three rules make a directory of these a warehouse, and
-[`src/showcase/warehouse.py`](src/showcase/warehouse.py) is the whole client:
+[`src/showcase/warehouse.py`](src/showcase/warehouse.py) is the whole Python
+client:
 
 - **The record tables carry `run`** on every row, so they concatenate across
   archives with `read_parquet('runs/*/answer/objective.parquet')`.
@@ -93,14 +97,23 @@ from read_parquet('runs/*/answer/objective.parquet', union_by_name = true)
 order by run, year;
 ```
 
-## The dashboard needs no model
+## How the site reads it
 
-Three tabs of the dashboard know the model by name, because they tell its
-story: the pathway, one day's dispatch, provenance. The fourth, **Explore**,
-knows nothing. It lists every quantity in the catalogue, offers the dimensions
-it finds as the axis, the colour and the filters, and plots. Point the solve
-job at a different lpspec model and that tab shows it unchanged. That is the
-property this repository exists to demonstrate.
+The site is an [Observable Framework](https://observablehq.com/framework/)
+app under [`site/`](site/). Its one data loader,
+[`site/src/data/runs.zip.py`](site/src/data/runs.zip.py), runs the warehouse
+queries above at build time and ships the result as a zip of parquet files,
+one per quantity across every run. Each page registers the tables it needs in
+its front matter and queries them with SQL, run by DuckDB-WASM in the
+browser; the charts are [Observable Plot](https://observablehq.com/plot/), and
+every input re-runs only the cells that depend on it.
+
+Three pages know the model by name, because they tell its story: the pathway,
+one day's dispatch, provenance. The fourth, **Explore**, knows nothing. It lists
+every quantity in the catalogue, offers the dimensions it finds as the axis,
+the colour and the filters, and plots. Point the solve job at a different
+lpspec model and that page shows it unchanged. That is the property this
+repository exists to demonstrate.
 
 ## What the checks say
 
@@ -110,13 +123,15 @@ property this repository exists to demonstrate.
   each period started from the fleet the last one left;
 - the warehouse queries name the run on every row, list the catalogue from the
   tree, and name `invest` as the one input `cheap_solar` changed;
-- the dashboard and the warehouse import no lpspec, the dashboard renders the
-  archive without an exception, and says so when there is nothing to read.
+- nothing past the solve job imports lpspec, and the site's loader ships every
+  table the pages read, or says what is missing.
 
-CI runs the same, then the two processes end to end.
+CI runs the same, then the pipeline end to end: the job, then the site build.
+A push to `main` also deploys the site to GitHub Pages.
 
 ## What it is not
 
-There is no hosted API, no scheduler, no database and no authentication. Each
-would sit on the same contract, and none is needed to show it. The numbers are
-synthetic and chosen so that the periods and the scenarios answer differently.
+There is no hosted API, no scheduler beyond the workflow, no database and no
+authentication. Each would sit on the same contract, and none is needed to
+show it. The numbers are synthetic and chosen so that the periods and the
+scenarios answer differently.

@@ -17,10 +17,20 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
       - run: uv sync --all-extras --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest
-      # The two processes, end to end: the job writes, the dashboard reads.
+      # The two halves, end to end: the job writes the archives, the site builds from them.
       - run: uv run showcase-solve --runs runs
-      - run: SHOWCASE_RUNS=runs uv run python -c "from streamlit.testing.v1 import AppTest; at = AppTest.from_file('src/showcase/dashboard.py', default_timeout=120).run(); assert not at.exception, at.exception"
+      - run: npm ci
+        working-directory: site
+      - run: npm run build
+        working-directory: site
+        env:
+          OBSERVABLE_TELEMETRY_DISABLE: "true"

@@ -26,6 +26,8 @@ def test_the_catalogue_is_read_off_the_tree(runs: Path):
     assert listed[('primal', 'p')] == ['year', 'day', 'hour', 'generator']
     assert listed[('dual', 'balance')] == ['year', 'day', 'hour']
     assert listed[('expression', 'emissions')] == ['year']
+    assert listed[('source', 'load')] == ['year', 'day', 'hour']
+    assert ('source', 'day') not in listed, 'a table of labels has no value to plot'
     assert len(table) == len(listed), 'two runs of one model list each quantity once'
 
 
@@ -36,6 +38,6 @@ def test_the_changed_input_is_named(runs: Path):
 
 
 def test_an_input_is_read_the_same_way(runs: Path):
-    table = warehouse.source(runs, 'load')
+    table = warehouse.frame(runs, 'source', 'load')
     assert table.columns == ['run', 'year', 'day', 'hour', 'value'], 'run first, then the columns the model declared'
     assert table['run'].unique().sort().to_list() == SCENARIOS

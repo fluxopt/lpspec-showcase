@@ -12,7 +12,13 @@ from pathlib import Path
 import duckdb
 import polars as pl
 
-KINDS = ('primal', 'dual', 'expression')
+#: The kinds of value frame an archive holds, and where each lives under it.
+KINDS = {
+    'primal': 'answer/primal/{name}/*.parquet',
+    'dual': 'answer/dual/{name}/*.parquet',
+    'expression': 'answer/expression/{name}/*.parquet',
+    'source': 'sources/{name}.parquet',
+}
 
 
 def records(runs: Path) -> pl.DataFrame:
@@ -34,19 +40,18 @@ def catalogue(runs: Path) -> pl.DataFrame:
     """Every kind and name the archives hold, with the dimensions each is keyed by.
 
     Read off the tree and the parquet schema, so a model with other variables
-    lists other rows and nothing here has to change.
+    lists other rows and nothing here has to change. A source that only lists
+    a dimension's labels carries no ``value`` and is left out.
     """
     rows = []
-    for kind in KINDS:
-        for directory in sorted(runs.glob(f'*/answer/{kind}/*/')):
-            first = next(iter(sorted(directory.glob('*.parquet'))), None)
-            if first is None:
-                continue
-            dims = [c for c in pl.scan_parquet(first).collect_schema().names() if c != 'value']
-            rows.append({'kind': kind, 'name': directory.name, 'dims': dims})
-    return pl.DataFrame(rows, schema={'kind': pl.String, 'name': pl.String, 'dims': pl.List(pl.String)}).unique(
-        maintain_order=True
-    )
+    for kind, pattern in KINDS.items():
+        for first in sorted(runs.glob('*/' + pattern.format(name='*'))):
+            name = first.stem if kind == 'source' else first.parent.name
+            columns = pl.scan_parquet(first).collect_schema().names()
+            if 'value' in columns:
+                rows.append({'kind': kind, 'name': name, 'dims': [c for c in columns if c != 'value']})
+    schema = {'kind': pl.String, 'name': pl.String, 'dims': pl.List(pl.String)}
+    return pl.DataFrame(rows, schema=schema).unique(subset=['kind', 'name'], maintain_order=True)
 
 
 def frame(runs: Path, kind: str, name: str) -> pl.DataFrame:
@@ -56,7 +61,7 @@ def frame(runs: Path, kind: str, name: str) -> pl.DataFrame:
     solved, because a value frame carries the model's own columns only.
     """
     root = runs.resolve().as_posix()
-    glob = f'{root}/*/answer/{kind}/{name}/*.parquet'
+    glob = f'{root}/*/' + KINDS[kind].format(name=name)
     return duckdb.execute(
         """
         select regexp_extract(filename, ? || '/([^/]+)/', 1) as run, * exclude (filename)
@@ -66,22 +71,9 @@ def frame(runs: Path, kind: str, name: str) -> pl.DataFrame:
     ).pl()
 
 
-def source(runs: Path, name: str) -> pl.DataFrame:
-    """One input across every run, in the shape the model declared it: ``(run, <dims…>, value)``."""
-    root = runs.resolve().as_posix()
-    return duckdb.execute(
-        """
-        select regexp_extract(filename, ? || '/([^/]+)/', 1) as run, * exclude (filename)
-        from read_parquet(?, filename = true)
-        """,
-        [root, f'{root}/*/sources/{name}.parquet'],
-    ).pl()
-
-
 def changed_inputs(runs: Path, base: str, other: str) -> list[str]:
     """The sources whose bytes differ between two runs, by name."""
-    table = inputs(runs)
-    digests = table.pivot('run', index='source', values='digest')
+    digests = inputs(runs).pivot('run', index='source', values='digest')
     return digests.filter(pl.col(base) != pl.col(other))['source'].sort().to_list()
 
 
