@@ -26,6 +26,7 @@ async def _():
     import sys
 
     pathway_text = None
+    notice = None
     if sys.platform == 'emscripten':
         # In the browser: lpspec and math-spec are not on PyPI, so their wheels sit beside this page.
         import json
@@ -40,7 +41,16 @@ async def _():
         await micropip.install(['polars', 'highspy', 'numpy', 'pydantic', 'pyparsing', 'pyyaml', 'altair'])
         await micropip.install([str(here / 'wheels' / name) for name in manifest], deps=False)
         pathway_text = await (await pyfetch(str(here / 'models' / 'pathway.yaml'))).string()
+        notice = _mo.callout(
+            _mo.md(
+                '**This notebook is running in your browser**, Python and solver included, and holds about 1 GB of '
+                'memory in this tab after a solve. A desktop browser is fine with that; a phone browser is not, and '
+                'will reload the page. Nothing you do here leaves your machine.'
+            ),
+            kind='warn',
+        )
     ready = True
+    notice
     return pathway_text, ready
 
 
