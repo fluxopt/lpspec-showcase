@@ -30,16 +30,6 @@ async def _():
         await micropip.install(['polars', 'highspy', 'numpy', 'pydantic', 'pyparsing', 'pyyaml', 'altair'])
         await micropip.install([f'./wheels/{name}' for name in manifest], deps=False)
         pathway_text = await (await pyfetch('./models/pathway.yaml')).string()
-
-        # polars' browser build has no streaming engine, which lpspec asks for when it collects.
-        import polars as _pl
-
-        _collect = _pl.LazyFrame.collect
-
-        def _collect_in_memory(self, *args, engine='auto', **kwargs):
-            return _collect(self, *args, engine='in-memory' if engine == 'streaming' else engine, **kwargs)
-
-        _pl.LazyFrame.collect = _collect_in_memory
     ready = True
     return pathway_text, ready
 
