@@ -11,7 +11,8 @@ Pages, so there is no server anywhere.
 
 ```text
 showcase-solve ──▶ runs/<scenario>/ ──▶ observable build ──▶ GitHub Pages
-   (lpspec)          (parquet + yaml)      (one Python loader)   (DuckDB-WASM + Plot)
+   (lpspec)          (parquet + yaml)      (one Python loader)   (DuckDB-WASM + Plot
+                                                                  + Perspective)
 ```
 
 The point of the repository is the middle box. lpspec archives a solve as tidy
@@ -110,6 +111,11 @@ its front matter and queries them with SQL, run by DuckDB-WASM in the
 browser; the charts are [Observable Plot](https://observablehq.com/plot/), and
 every input re-runs only the cells that depend on it.
 
+A third loader, [`site/src/perspective.css.js`](site/src/perspective.css.js),
+prints Perspective's own stylesheet out of the installed package, because that
+stylesheet carries the labels its settings panel prints. Reading it from
+`node_modules` at build time is what keeps a copy of it out of the tree.
+
 A second loader, [`site/src/model.md.py`](site/src/model.md.py), prints a
 whole page: the spec out of the archive, typeset as equations by the
 language's own `to_markdown`, in the notation
@@ -126,11 +132,14 @@ a difference; clicking a period there selects it, and a link carries the
 scenario and period into **Dispatch**, where a slider moves through the
 periods over all three typical days with the net load drawn, and a heatmap
 shows the price by hour and period. **Provenance** shows what was solved and
-what differs between runs. **Explore** knows nothing. It lists
-every quantity in the catalogue, offers the dimensions it finds as the axis,
-the colour and the filters, and plots. Point the solve job at a different
-lpspec model and that page shows it unchanged. That is the property this
-repository exists to demonstrate.
+what differs between runs. **Explore** knows nothing. It lists every quantity
+in the catalogue and hands one to a
+[Perspective](https://perspective.finos.org/) pivot table, keyed by the
+dimensions it reads off the parquet: the model's own dimensions group the rows,
+the scenario splits the columns, and re-pivoting, filtering and charting are
+the component's, not the page's. Point the solve job at a different lpspec
+model and that page shows it unchanged. That is the property this repository
+exists to demonstrate.
 
 ## The modelling session
 

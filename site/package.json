@@ -8,9 +8,16 @@
     "clean": "rm -rf src/.observablehq/cache dist"
   },
   "dependencies": {
-    "@observablehq/framework": "^1.13.4"
+    "@observablehq/framework": "^1.13.4",
+    "@perspective-dev/client": "^5.5.0",
+    "@perspective-dev/viewer": "^5.5.0",
+    "@perspective-dev/viewer-charts": "^5.5.0",
+    "@perspective-dev/viewer-datagrid": "^5.5.0"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }
