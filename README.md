@@ -145,7 +145,9 @@ and two sliders re-solve the pathway with a different cap and solar cost.
 uv run marimo edit notebooks/session.py
 ```
 
-The site's **Session** page runs the notebook in the browser, in edit mode.
+The site's **Session** page runs the notebook in the browser: in run mode by
+default, where the model, the data and the sliders are live and the code is
+shown but locked, and in edit mode one link away.
 marimo's WASM export loads Python through Pyodide, whose distribution carries highspy, polars
 and the rest of lpspec's dependencies; lpspec and math-spec are not on PyPI, so
 `tools/wasm_bundle.py` builds them as wheels and puts them beside the page,

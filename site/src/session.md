@@ -6,14 +6,15 @@ title: Session
 
 The other pages are what lpspec produces unattended: a job solves, archives, and this site reads the archive. This page is the other half of the story, a [marimo](https://marimo.io) notebook in which the model is a document you edit by hand. Change the YAML and the typeset math, the validation and the solve follow. Change a number in the data table, or move a slider under the pathway, and the charts re-solve.
 
-**It runs in your browser, and it is editable.** Python, the HiGHS solver, polars and lpspec itself load as WebAssembly, so nothing runs on a server and there is nothing to install. The first load fetches about 40 MB and takes a moment; after that every edit, to the model, the data or the code, re-solves on your machine. A desktop browser is the place for it: the cells are code editors.
+**It runs in your browser.** Python, the HiGHS solver, polars and lpspec itself load as WebAssembly, so nothing runs on a server and there is nothing to install. The first load fetches about 40 MB and takes a moment; after that every edit to the model, the data or the sliders re-solves on your machine. The code under each output is shown but locked; edit mode, linked below, unlocks it too.
 
 ```js
 const app = "./session-app/index.html";
-const launch = view(Inputs.button("Run the notebook here, in this page", {value: 0, reduce: (n) => n + 1}));
+const phone = matchMedia("(max-width: 700px)").matches;
+const launch = phone ? 0 : view(Inputs.button("Run the notebook here, in this page", {value: 0, reduce: (n) => n + 1}));
 ```
 
-<p>${html`<a href="${app}" target="_blank">or open it in its own tab ↗</a>`}</p>
+${phone ? html`<p><strong>On a phone, this is the still picture.</strong> The live notebook needs more memory than a phone browser gives one tab, which shows as the page reloading. The notebook below is the same session as it ran at the last build, outputs included; open this page on a desktop to run it.</p>` : html`<p><a href="${app}" target="_blank">Open it in its own tab ↗</a> · <a href="./session-edit/index.html" target="_blank">open it in edit mode ↗</a></p>`}
 
 ${launch ? html`<iframe src="${app}" title="The modelling session, running in your browser" style="width: 100%; height: 2400px; border: 1px solid var(--theme-foreground-faintest); border-radius: 8px; background: white;"></iframe>` : ""}
 
@@ -36,3 +37,5 @@ const session = FileAttachment("session.html").href;
 ```
 
 <p>${html`<a href="${session}" target="_blank">Open the executed notebook in its own tab ↗</a>`}</p>
+
+${phone ? html`<iframe src="${session}" title="The modelling session, as it ran at the last build" style="width: 100%; height: 2400px; border: 1px solid var(--theme-foreground-faintest); border-radius: 8px; background: white;"></iframe>` : ""}
