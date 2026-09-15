@@ -419,6 +419,7 @@ solve = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "pip" },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -437,6 +438,7 @@ provides-extras = ["solve", "lab"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "pip", specifier = ">=24" },
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.12" },
 ]
@@ -691,6 +693,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/30/4b/90c937815137d43ce71ba043cd3566221e9df6b9c805f24b5d138c9d40a7/parso-0.8.7.tar.gz", hash = "sha256:eaaac4c9fdd5e9e8852dc778d2d7405897ec510f2a298071453e5e3a07914bb1", size = 401824, upload-time = "2026-05-01T23:13:02.138Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/5d/8268b644392ee874ee82a635cd0df1773de230bde356c38de28e298392cc/parso-0.8.7-py2.py3-none-any.whl", hash = "sha256:a8926eb2a1b915486941fdbd31e86a4baf88fe8c210f25f2f35ecec5b574ca1c", size = 107025, upload-time = "2026-05-01T23:12:58.867Z" },
+]
+
+[[package]]
+name = "pip"
+version = "26.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/15/4500e320e6b101ec3b719ae85b697d9940b6cda672bc555bd6016fc60c6f/pip-26.2.1.tar.gz", hash = "sha256:f6ad667e89a1fe78046c8f13232b247200f5258d7828f3f7883d660878e0813f", size = 1848877, upload-time = "2026-08-04T22:51:14.148Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f3/6e/1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/pip-26.2.1-py3-none-any.whl", hash = "sha256:71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e", size = 1816632, upload-time = "2026-08-04T22:51:12.472Z" },
 ]
 
 [[package]]

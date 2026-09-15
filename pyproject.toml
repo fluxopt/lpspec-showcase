@@ -30,7 +30,8 @@ showcase-solve = "showcase.solve:main"
 repository = "https://github.com/fluxopt/lpspec-showcase"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.12"]
+# pip: tools/wasm_bundle.py builds wheels with it.
+dev = ["pip>=24", "pytest>=8", "ruff>=0.12"]
 
 [tool.hatch.metadata]
 # The `solve` extra is a git tag, which a wheel's metadata may not carry without this.
@@ -54,6 +55,8 @@ ignore = ["E501"]
 [tool.ruff.lint.per-file-ignores]
 # A bare expression at the end of a marimo cell is its output.
 "notebooks/**/*.py" = ["B018"]
+# A script reports by printing.
+"tools/**/*.py" = ["T20"]
 
 [tool.ruff.format]
 quote-style = "single"

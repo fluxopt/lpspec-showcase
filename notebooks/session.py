@@ -3,6 +3,7 @@
 #   uv run marimo edit notebooks/session.py      # live: edit the YAML, the data, the sliders
 #   uv run python notebooks/session.py           # top to bottom, as a script
 #   uv run marimo export html notebooks/session.py -o session.html
+#   uv run marimo export html-wasm notebooks/session.py -o app --mode run   # runs in the browser
 #
 # The model is a document. Edit it in the cell below and the typeset math, the
 # validation and the solve all follow, because every cell that reads it re-runs.
@@ -14,7 +15,38 @@ app = marimo.App(width='medium', app_title='A modelling session on lpspec')
 
 
 @app.cell(hide_code=True)
-def _():
+async def _():
+    import sys
+
+    pathway_text = None
+    if sys.platform == 'emscripten':
+        # In the browser: lpspec and math-spec are not on PyPI, so their wheels sit beside this page.
+        import json
+
+        import micropip
+        from pyodide.http import pyfetch
+
+        manifest = json.loads(await (await pyfetch('./wheels/manifest.json')).string())
+        await micropip.install(['polars', 'highspy', 'numpy', 'pydantic', 'pyparsing', 'pyyaml', 'altair'])
+        await micropip.install([f'./wheels/{name}' for name in manifest], deps=False)
+        pathway_text = await (await pyfetch('./models/pathway.yaml')).string()
+
+        # polars' browser build has no streaming engine, which lpspec asks for when it collects.
+        import polars as pl
+
+        collect = pl.LazyFrame.collect
+
+        def collect_in_memory(self, *args, engine='auto', **kwargs):
+            return collect(self, *args, engine='in-memory' if engine == 'streaming' else engine, **kwargs)
+
+        pl.LazyFrame.collect = collect_in_memory
+    ready = True
+    return pathway_text, ready
+
+
+@app.cell(hide_code=True)
+def _(ready):
+    assert ready
     import re
 
     import altair as alt
@@ -238,15 +270,16 @@ def _(mo):
 
 
 @app.cell
-def _(cap_2045, lps, solar_factor):
+def _(cap_2045, lps, pathway_text, solar_factor):
     from showcase.scenarios import INVEST, YEARS
     from showcase.scenarios import sources as pathway_sources
     from showcase.solve import MODEL
 
+    pathway = pathway_text or MODEL.read_text()
     invest = {y: {**INVEST[y], 'solar': INVEST[y]['solar'] * solar_factor.value} for y in YEARS}
     cap = {y: (cap_2045.value if y == YEARS[-1] else 1e12) for y in YEARS}
     runs = lps.solve_over(
-        MODEL, pathway_sources(invest=invest, cap=cap), lps.EachCoordinate('year'), carry={'existing': 'total'}
+        pathway, pathway_sources(invest=invest, cap=cap), lps.EachCoordinate('year'), carry={'existing': 'total'}
     )
     return (runs,)
 

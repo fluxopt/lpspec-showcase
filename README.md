@@ -31,6 +31,7 @@ uv sync --all-extras
 uv run showcase-solve --runs runs       # four scenarios, four periods each, a few seconds
 uv run marimo export html notebooks/session.py -o site/src/session.html
 cd site && npm ci && npm run dev        # the site, live, with the loader re-run on edit
+uv run marimo edit notebooks/session.py # the notebook, live, with a local kernel
 ```
 
 `showcase-solve base` solves one scenario. An archive is written whole, so a
@@ -144,9 +145,13 @@ and two sliders re-solve the pathway with a different cap and solar cost.
 uv run marimo edit notebooks/session.py
 ```
 
-The site's **Session** page embeds the notebook as it ran at the last build,
-outputs included and controls inert, so the story is readable without a
-kernel. `marimo export html` writes that file in CI before the site builds.
+The site's **Session** page runs the notebook in the browser. marimo's WASM
+export loads Python through Pyodide, whose distribution carries highspy, polars
+and the rest of lpspec's dependencies; lpspec and math-spec are not on PyPI, so
+`tools/wasm_bundle.py` builds them as wheels and puts them beside the page,
+with the pathway model, and the notebook's first cell installs them when it
+finds itself under Pyodide. Nothing runs on a server. The page also links the
+notebook as it ran at the last build, a static export, as the fallback.
 
 ## What the checks say
 
