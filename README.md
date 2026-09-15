@@ -117,8 +117,14 @@ the language package, which has no solver in it. No data binds and nothing is
 solved to produce that page, so the math it shows is exactly what the YAML
 states, and the other pages show what the solver made of it.
 
-Three pages know the model by name, because they tell its story: the pathway,
-one day's dispatch, provenance. **Explore** knows nothing. It lists
+Three pages know the model by name, because they tell its story. **Pathway**
+leads with four headline numbers, breaks the cost into building and running
+per technology, sets emissions against the cap, and compares two scenarios as
+a difference; clicking a period there selects it, and a link carries the
+scenario and period into **Dispatch**, where a slider moves through the
+periods over all three typical days with the net load drawn, and a heatmap
+shows the price by hour and period. **Provenance** shows what was solved and
+what differs between runs. **Explore** knows nothing. It lists
 every quantity in the catalogue, offers the dimensions it finds as the axis,
 the colour and the filters, and plots. Point the solve job at a different
 lpspec model and that page shows it unchanged. That is the property this
