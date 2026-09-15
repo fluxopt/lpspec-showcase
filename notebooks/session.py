@@ -1,3 +1,10 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "marimo",
+# ]
+# ///
+
 # A modelling session on lpspec, as a marimo notebook.
 #
 #   uv run marimo edit notebooks/session.py      # live: edit the YAML, the data, the sliders
@@ -23,13 +30,16 @@ async def _():
         # In the browser: lpspec and math-spec are not on PyPI, so their wheels sit beside this page.
         import json
 
+        import marimo as _mo
         import micropip
         from pyodide.http import pyfetch
 
-        manifest = json.loads(await (await pyfetch('./wheels/manifest.json')).string())
+        # Pyodide runs in a worker, so a relative URL would resolve against the worker's script: build them off the page.
+        here = _mo.notebook_location()
+        manifest = json.loads(await (await pyfetch(str(here / 'wheels' / 'manifest.json'))).string())
         await micropip.install(['polars', 'highspy', 'numpy', 'pydantic', 'pyparsing', 'pyyaml', 'altair'])
-        await micropip.install([f'./wheels/{name}' for name in manifest], deps=False)
-        pathway_text = await (await pyfetch('./models/pathway.yaml')).string()
+        await micropip.install([str(here / 'wheels' / name) for name in manifest], deps=False)
+        pathway_text = await (await pyfetch(str(here / 'models' / 'pathway.yaml'))).string()
     ready = True
     return pathway_text, ready
 

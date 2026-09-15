@@ -40,6 +40,10 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 packages = ["src/showcase"]
 
+# The notebook exported to the browser runs its cells on load, in edit mode too.
+[tool.marimo.runtime]
+auto_instantiate = true
+
 [tool.pytest.ini_options]
 pythonpath = ["tests"]
 testpaths = ["tests"]

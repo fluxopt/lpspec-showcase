@@ -6,7 +6,7 @@ title: Session
 
 The other pages are what lpspec produces unattended: a job solves, archives, and this site reads the archive. This page is the other half of the story, a [marimo](https://marimo.io) notebook in which the model is a document you edit by hand. Change the YAML and the typeset math, the validation and the solve follow. Change a number in the data table, or move a slider under the pathway, and the charts re-solve.
 
-**It runs in your browser.** Python, the HiGHS solver, polars and lpspec itself load as WebAssembly, so nothing runs on a server and there is nothing to install. The first load fetches about 40 MB and takes a moment; after that every edit re-solves on your machine.
+**It runs in your browser, and it is editable.** Python, the HiGHS solver, polars and lpspec itself load as WebAssembly, so nothing runs on a server and there is nothing to install. The first load fetches about 40 MB and takes a moment; after that every edit, to the model, the data or the code, re-solves on your machine. A desktop browser is the place for it: the cells are code editors.
 
 ```js
 const app = "./session-app/index.html";

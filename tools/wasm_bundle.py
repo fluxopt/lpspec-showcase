@@ -6,7 +6,8 @@ lpspec and math-spec are git dependencies, so micropip cannot resolve them by
 name; this builds each as a wheel from the pin in pyproject.toml and lists them
 in ``wheels/manifest.json``, which the notebook's bootstrap cell reads. The
 pathway model is copied under ``models/`` because the notebook reads it by
-path when it runs locally and fetches it by the same path in the browser.
+path when it runs locally and fetches it by the same path in the browser. The
+page is also told to run its cells on load.
 """
 
 import json
@@ -41,7 +42,22 @@ def main(out: Path) -> None:
     (wheels / 'manifest.json').write_text(json.dumps(names, indent=1))
     (out / 'models').mkdir(exist_ok=True)
     shutil.copy(ROOT / 'models' / 'pathway.yaml', out / 'models' / 'pathway.yaml')
+    run_on_load(out / 'index.html')
     print(f'{out}: {", ".join(names)}, models/pathway.yaml')
+
+
+def run_on_load(index: Path) -> None:
+    """Make the exported page run its cells on load in edit mode.
+
+    marimo's export embeds its built-in defaults rather than the project's
+    config, and the built-in default leaves an edit-mode notebook idle until
+    the reader presses run.
+    """
+    text = index.read_text()
+    flag = '"auto_instantiate": false'
+    if text.count(flag) != 1:
+        raise LookupError(f'{index} carries {text.count(flag)} copies of {flag}; expected one')
+    index.write_text(text.replace(flag, '"auto_instantiate": true'))
 
 
 def _requirement(wheel: Path, name: str) -> str:
