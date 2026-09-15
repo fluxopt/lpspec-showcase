@@ -24,7 +24,7 @@ the same directory.
 ## Run it
 
 Requires Python 3.12, [uv](https://docs.astral.sh/uv/) and Node 20 or later.
-lpspec is not on PyPI yet, so the `solve` extra pins it to a git ref.
+lpspec is not on PyPI yet, so the `solve` extra pins it to a git tag.
 
 ```bash
 uv sync --all-extras
