@@ -101,6 +101,9 @@ from read_parquet('runs/*/answer/objective.parquet', union_by_name = true)
 order by run, year;
 ```
 
+Both need `runs/` to exist: it is what the solve job writes, and it is not
+checked in.
+
 [`clients/`](clients/) takes that further: `headline.py` and `headline.sql`
 answer the same four questions off the archive, in polars and in DuckDB, and
 neither imports anything this repository ships. `tests/test_clients.py` holds
