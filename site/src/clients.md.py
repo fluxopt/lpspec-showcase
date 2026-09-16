@@ -1,78 +1,157 @@
-"""The archive read twice, by two clients that import nothing this repository ships.
+"""Reading the archive: what is in it, what a query gets back, and how to run one yourself.
 
-A page loader: it runs both clients over the archives at build time and prints
-what each returned, beside the source of each. The sources are read from the
-files that run, so the page cannot drift from them.
+A page loader, because two of its sections are facts about the directory on
+disk — the tree the solve job wrote, and the source of the two clients in
+`clients/`. Everything else on the page is a live query, run by DuckDB in the
+reader's browser against the same parquet the other pages read.
 """
 
 import os
 import sys
 from pathlib import Path
 
-import duckdb
-
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / 'clients'))
-from headline import headline  # noqa: E402
-
 runs = Path(os.environ.get('SHOWCASE_RUNS', '../runs'))
-if not any(runs.glob('*/answer/objective.parquet')):
+archives = sorted(p.parent.name for p in runs.glob('*/model.yaml'))
+if not archives:
     sys.exit(f'{runs.resolve()} holds no archive: run `showcase-solve --runs {runs}` first')
 
-polars_source = (ROOT / 'clients' / 'headline.py').read_text()
-sql_source = (ROOT / 'clients' / 'headline.sql').read_text()
+run = archives[0]
 
-in_sql = {
-    row['run']: row
-    for row in duckdb.sql(sql_source.replace("'runs/", f"'{runs.resolve().as_posix()}/")).pl().to_dicts()
-}
-NUMBERS = {
-    'pathway_cost': ('Pathway cost', '{:,.0f}'),
-    'emissions_cut': ('Emissions cut', '{:.1%}'),
-    'zero_carbon_share': ('Zero-carbon fleet', '{:.1%}'),
-    'carbon_price': ('Carbon price', '{:,.2f}'),
-}
 
-rows = []
-for name in sorted(in_sql):
-    polars_answer = headline(runs / name)
-    for key, (label, fmt) in NUMBERS.items():
-        agree = abs(polars_answer[key] - in_sql[name][key]) <= abs(in_sql[name][key]) * 1e-9
-        rows.append(
-            f'| `{name}` | {label} | {fmt.format(polars_answer[key])} | {fmt.format(in_sql[name][key])} | {"yes" if agree else "**no**"} |'
-        )
+def kb(path: Path) -> str:
+    return f'{path.stat().st_size / 1024:.1f} kB'
 
-table = '\n'.join(rows)
+
+def tree(root: Path) -> str:
+    """The archive's shape rather than its file list: what each directory is for, and how much of it there is."""
+    answer = root / 'answer'
+    rows = [
+        ('├── model.yaml', kb(root / 'model.yaml'), 'the spec, as solved'),
+        ('├── sources.parquet', kb(root / 'sources.parquet'), '(run, source, digest)'),
+        ('├── sources/', f'{len(list((root / "sources").glob("*.parquet")))} files', 'every input, as solved'),
+        ('└── answer/', '', ''),
+        ('    ├── objective.parquet', kb(answer / 'objective.parquet'), 'one row per period: status, objective'),
+        ('    ├── metrics.parquet', kb(answer / 'metrics.parquet'), 'one row per period: size, seconds'),
+    ]
+    kinds = [d for d in ('primal', 'dual', 'expression') if (answer / d).is_dir()]
+    for index, kind in enumerate(kinds):
+        quantities = sorted(q.name for q in (answer / kind).iterdir() if q.is_dir())
+        slices = len(list((answer / kind / quantities[0]).glob('*.parquet')))
+        elbow = '    └──' if index == len(kinds) - 1 else '    ├──'
+        rows.append((f'{elbow} {kind}/', f'{len(quantities)}', f'{", ".join(quantities)} — {slices} slices each'))
+    return '\n'.join(f'{name:<28}{size:>9}   {gloss}'.rstrip() for name, size, gloss in rows)
+
+
+sources = {name: (ROOT / 'clients' / name).read_text().rstrip() for name in ('headline.py', 'headline.sql')}
 
 sys.stdout.write(f"""---
 title: Clients
+sql:
+  objective: ./data/runs/objective.parquet
+  metrics: ./data/runs/metrics.parquet
+  digests: ./data/runs/sources.parquet
+  total: ./data/runs/primal/total.parquet
+  emissions: ./data/runs/expression/emissions.parquet
 ---
 
-# The archive has no client library
+# Reading the archive
 
-The other pages read the archive through one: [`warehouse.py`](https://github.com/fluxopt/lpspec-showcase/blob/main/src/showcase/warehouse.py), about sixty lines of queries. That file is a convenience, not a contract. The contract is the directory: **one parquet file per variable, dual, named expression and input, keyed by the model's own dimensions.** Anything that reads parquet is already a client.
+Every other page here is a client. So is a DuckDB shell, a notebook, and a BI tool pointed at the directory. None of them is privileged, because **the contract is the directory, not a library** — and this page is where you learn to read it.
 
-Here are two that import nothing this repository ships. Both were run when this page was built, over the same `runs/` directory the other pages read, and both answer the four questions the [pathway page](./) leads with.
+Every result below is a real query, run by DuckDB in your browser against the same parquet the dashboard reads. The SQL is above each one, and you can change the last one.
 
-| run | number | polars | DuckDB | agree |
-|---|---|---|---|---|
-{table}
+## What the solve job wrote
 
-That last column is checked in CI as well as printed here: `tests/test_clients.py` holds the two clients to each other on every archive in the directory, so a drift between them fails the build rather than reaching this page.
+One archive per scenario. This is `{run}`, by shape rather than by file — every quantity is its own directory of per-period slices:
 
-## In polars
-
-Ten lines of dataframe code, no SQL, no server.
-
-```python
-{polars_source.rstrip()}
+```text
+runs/{run}/
+{tree(runs / run)}
 ```
 
-## In DuckDB
+Three kinds of thing are in there. **`model.yaml` and `sources/`** are what was solved — the spec and every input, so the run reproduces. **`answer/`** is what came back: `primal/` per variable, `dual/` per constraint, `expression/` per named quantity, one directory each. **`objective.parquet`, `metrics.parquet` and `sources.parquet`** are the record: one row per period saying how it terminated, what it cost to build and solve, and what each input's bytes digest to.
 
-One query, every scenario at once, in a shell with nothing installed. `runs/`
-is written by the solve job rather than checked in, and the globs are relative,
-so both of these matter:
+## What a query gets back
+
+A value frame carries the model's own dimensions and a `value`. Nothing else, and no index:
+
+```sql id=shape
+select * from total order by run, year, generator limit 6
+```
+
+```js
+display(Inputs.table(shape, {{maxHeight: 220}}));
+```
+
+Those column names — `year`, `generator` — are the model's, not this repository's. They come from the spec that was solved, which is why a reader who has never seen the model can still group by `generator`, and why two quantities keyed the same way join without a mapping table.
+
+## Three rules, one query each
+
+**The record tables carry `run` on every row**, so they concatenate across archives with a single glob and need no path parsing:
+
+```sql id=records
+select run, year, termination_condition, round(objective) as objective from objective order by run, year limit 5
+```
+
+```js
+display(Inputs.table(records, {{maxHeight: 200}}));
+```
+
+**A value frame does not carry `run`**, because it carries the model's columns only. Reading across archives, you derive it from the path — `filename = true` in DuckDB, one `regexp_extract`. The site's loader has already done that here, which is why `run` is a column above.
+
+**The catalogue is the tree.** Which quantities exist and which dimensions key each is read off the directory names and the parquet schema. Nothing is declared twice:
+
+```js
+const catalogue = await FileAttachment("data/runs.zip").zip().then((z) => z.file("catalogue.json")).then((f) => f.json());
+display(Inputs.table(catalogue.map((d) => ({{kind: d.kind, name: d.name, "keyed by": d.dims.join(", ") || "nothing"}})), {{maxHeight: 260}}));
+```
+
+## Run one yourself
+
+The tables above are registered; edit the query and it re-runs. `objective`, `metrics`, `digests`, `total` and `emissions` are in scope.
+
+```js
+const db = await DuckDBClient.of({{
+  objective: FileAttachment("data/runs/objective.parquet"),
+  metrics: FileAttachment("data/runs/metrics.parquet"),
+  digests: FileAttachment("data/runs/sources.parquet"),
+  total: FileAttachment("data/runs/primal/total.parquet"),
+  emissions: FileAttachment("data/runs/expression/emissions.parquet"),
+}});
+```
+
+```js
+const typed = view(Inputs.textarea({{
+  label: "SQL",
+  rows: 4,
+  submit: "Run",
+  value: "select run, year, sum(value) as capacity\\nfrom total\\ngroup by run, year\\norder by run, year",
+}}));
+```
+
+```js
+const answer = await db.query(typed).then((rows) => Inputs.table(rows, {{maxHeight: 300}}))
+  .catch((error) => html`<div class="warning" style="padding:0.5rem 1rem"><b>${{error.name}}</b>: ${{error.message}}</div>`);
+display(answer);
+```
+
+## The same thing, in your own tools
+
+Neither of these imports lpspec, and neither imports this repository's `warehouse.py`. Both answer the four numbers the [pathway page](./) leads with, and `tests/test_clients.py` holds them to each other on every archive in the directory — so a drift between them fails CI rather than reaching this page.
+
+<details><summary><b>Ten lines of polars</b> — <code>uv run python clients/headline.py runs/{run}</code></summary>
+
+```python
+{sources['headline.py']}
+```
+
+</details>
+
+<details><summary><b>One DuckDB query</b>, every scenario at once — <code>duckdb -c ".read clients/headline.sql"</code></summary>
+
+`runs/` is written by the solve job rather than checked in, and the globs are
+relative, so both of these matter:
 
 ```bash
 uv run showcase-solve --runs runs     # once, if runs/ is not there yet
@@ -83,16 +162,8 @@ Get either wrong and the query says which one to run, rather than reporting a
 path that does not exist.
 
 ```sql
-{sql_source.rstrip()}
+{sources['headline.sql']}
 ```
 
-## Why this page exists
-
-Two properties of the archive make it possible, and neither is about this repository.
-
-**The dimensions carry the model's own names.** A value frame is `(year, day, hour, generator, value)`, not `(dim1, dim2, dim3, value)`, because the names come from the spec that was solved. So a reader who has never seen the model can still group by `generator`, and two quantities keyed the same way join without a mapping table.
-
-**The record tables carry `run`, and a value frame does not.** Digests, statuses and metrics concatenate across archives with one glob. A value frame holds the model's columns only, so `run` comes off the path — which is what `filename = true` is doing in the query above.
-
-The consequence is that a DuckDB shell, a notebook, a BI tool pointed at the directory, and this site are the same kind of thing. Nothing here is privileged.
+</details>
 """)
