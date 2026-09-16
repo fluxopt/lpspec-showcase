@@ -70,11 +70,17 @@ Ten lines of dataframe code, no SQL, no server.
 
 ## In DuckDB
 
-One query, every scenario at once, in a shell with nothing installed:
+One query, every scenario at once, in a shell with nothing installed. `runs/`
+is written by the solve job rather than checked in, and the globs are relative,
+so both of these matter:
 
 ```bash
+uv run showcase-solve --runs runs     # once, if runs/ is not there yet
 duckdb -c ".read clients/headline.sql"
 ```
+
+Get either wrong and the query says which one to run, rather than reporting a
+path that does not exist.
 
 ```sql
 {sql_source.rstrip()}

@@ -1,11 +1,20 @@
 -- The four headline numbers off a directory of archives, for every scenario at
--- once, in a DuckDB shell with nothing installed:
+-- once, in a DuckDB shell with nothing installed. The globs are relative, so
+-- this runs from the repository root, and `runs/` is written by the solve job
+-- rather than checked in:
 --
+--     uv run showcase-solve --runs runs     # once, if runs/ is not there yet
 --     duckdb -c ".read clients/headline.sql"
+--
+-- The first statement is why a wrong directory or a missing archive says which
+-- of those two to run, rather than reporting a path that does not exist.
 --
 -- The record tables carry `run` already. A value frame carries the model's own
 -- columns only, so `run` comes off the path, which `filename = true` gives.
 -- Point the four globs at another directory and the query is unchanged.
+select error('no archive under runs/ — run `uv run showcase-solve --runs runs` first, from the repository root')
+from (select 1) where (select count(*) from glob('runs/*/answer/objective.parquet')) = 0;
+
 with objective as (
     select run, year, objective
     from read_parquet('runs/*/answer/objective.parquet', union_by_name = true)

@@ -86,3 +86,12 @@ def test_the_clients_page_says_when_there_is_nothing_to_read(tmp_path: Path):
     )
     assert done.returncode != 0
     assert b'holds no archive' in done.stderr
+
+
+def test_the_sql_client_names_the_fix_when_there_is_no_archive(tmp_path: Path):
+    """A wrong directory, or a fresh clone where the solve job has not run, is the likely first failure."""
+    query = SQL.read_text().replace("'runs/", f"'{(tmp_path / 'runs').as_posix()}/")
+    with pytest.raises(duckdb.Error) as raised:
+        duckdb.sql(query).fetchall()
+    assert 'showcase-solve' in str(raised.value), 'the message names the command that fixes it'
+    assert 'repository root' in str(raised.value), 'and the directory it is run from'
