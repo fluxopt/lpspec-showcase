@@ -10,9 +10,10 @@ Pages, so there is no server anywhere.
 **Live:** <https://fluxopt.github.io/lpspec-showcase/>
 
 ```text
-showcase-solve ──▶ runs/<scenario>/ ──▶ observable build ──▶ GitHub Pages
-   (lpspec)          (parquet + yaml)      (one Python loader)   (DuckDB-WASM + Plot
-                                                                  + Perspective)
+showcase-solve ──┐                                    ┌──▶ observable build ──▶ GitHub Pages
+   (lpspec)      ├──▶ runs/<scenario>/ ───────────────┤     (one Python loader)  (DuckDB-WASM
+showcase-serve ──┘      (parquet + yaml)              │                           + Plot
+   (lpspec, on request)                               └──▶ clients/, a DuckDB shell, a notebook
 ```
 
 The point of the repository is the middle box. lpspec archives a solve as tidy
@@ -207,9 +208,34 @@ notebook as it ran at the last build, a static export, as the fallback.
 CI runs the same, then the pipeline end to end: the job, then the site build.
 A push to `main` also deploys the site to GitHub Pages.
 
+## Solving on request
+
+[`server/`](server/) is the second producer, and it exists to show that adding
+one is additive rather than a rewrite. It writes the same directories
+`showcase-solve` writes, so every reader above — the site, `clients/`, a DuckDB
+shell — keeps working with no change and no knowledge that it is running.
+
+```bash
+uv sync --extra server
+uv run showcase-serve --runs runs     # then POST /runs/base, GET /runs
+```
+
+**It holds no database.** A finished run is described by the archive it wrote,
+which already records its status, its objective and when it was solved, so
+`GET /runs` is a query over the directory plus whatever this process still has
+in flight. A second server over the same directory reports the same registry,
+which `tests/test_server.py` asserts.
+
+What that costs is history. An archive is keyed by scenario, so re-solving one
+replaces it, and the registry says what is there now rather than what has ever
+been asked for. Keeping the second thing is a run registry, and a run registry
+is a table about people and process rather than about the model — it is not in
+this repository and it is not in lpspec.
+
 ## What it is not
 
-There is no hosted API, no scheduler beyond the workflow, no database and no
-authentication. Each would sit on the same contract, and none is needed to
-show it. The numbers are synthetic and chosen so that the periods and the
-scenarios answer differently.
+There is no authentication, no container and no database. Each would sit on the
+same contract, and none is needed to show it; the first of them that is
+genuinely needed is the point at which `server/` stops being an illustration.
+The numbers are synthetic and chosen so that the periods and the scenarios
+answer differently.
