@@ -100,6 +100,13 @@ from read_parquet('runs/*/answer/objective.parquet', union_by_name = true)
 order by run, year;
 ```
 
+[`clients/`](clients/) takes that further: `headline.py` and `headline.sql`
+answer the same four questions off the archive, in polars and in DuckDB, and
+neither imports anything this repository ships. `tests/test_clients.py` holds
+them to each other on every archive in the directory, and the site's
+**Clients** page prints both sources beside the numbers each returned at build
+time.
+
 ## How the site reads it
 
 The site is an [Observable Framework](https://observablehq.com/framework/)
@@ -132,7 +139,9 @@ a difference; clicking a period there selects it, and a link carries the
 scenario and period into **Dispatch**, where a slider moves through the
 periods over all three typical days with the net load drawn, and a heatmap
 shows the price by hour and period. **Provenance** shows what was solved and
-what differs between runs. **Explore** knows nothing. It lists every quantity
+what differs between runs. **Clients** reads the archive twice more, in ten
+lines of polars and one DuckDB query, to show that the directory needs no
+client library at all. **Explore** knows nothing. It lists every quantity
 in the catalogue and hands one to a
 [Perspective](https://perspective.finos.org/) pivot table, keyed by the
 dimensions it reads off the parquet: the model's own dimensions group the rows,

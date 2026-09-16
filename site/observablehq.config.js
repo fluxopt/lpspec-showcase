@@ -20,6 +20,7 @@ export default {
     {name: "Model", path: "/model"},
     {name: "Dispatch", path: "/dispatch"},
     {name: "Explore", path: "/explore"},
+    {name: "Clients", path: "/clients"},
     {name: "Provenance", path: "/provenance"},
     {name: "Session", path: "/session"},
   ],

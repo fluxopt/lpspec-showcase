@@ -61,6 +61,9 @@ ignore = ["E501"]
 "notebooks/**/*.py" = ["B018"]
 # A script reports by printing.
 "tools/**/*.py" = ["T20"]
+# A client is a script a reader runs; it reports by printing, and its lambdas
+# are the reason it is ten lines rather than twenty.
+"clients/**/*.py" = ["T20", "E731"]
 
 [tool.ruff.format]
 quote-style = "single"
