@@ -18,6 +18,7 @@ export default {
   toc: false,
   pages: [
     {name: "Model", path: "/model"},
+    {name: "Annex", path: "/annex"},
     {name: "Dispatch", path: "/dispatch"},
     {name: "Explore", path: "/explore"},
     {name: "Clients", path: "/clients"},

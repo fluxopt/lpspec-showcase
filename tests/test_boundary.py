@@ -12,7 +12,9 @@ import pytest
 ROOT = Path(__file__).parents[1]
 LOADER = ROOT / 'site' / 'src' / 'data' / 'runs.zip.py'
 MODEL_PAGE = ROOT / 'site' / 'src' / 'model.md.py'
-READERS = [ROOT / 'src' / 'showcase' / 'warehouse.py', LOADER, MODEL_PAGE]
+ANNEX = ROOT / 'src' / 'showcase' / 'annex.py'
+ANNEX_PAGE = ROOT / 'site' / 'src' / 'annex.md.py'
+READERS = [ROOT / 'src' / 'showcase' / 'warehouse.py', ANNEX, LOADER, MODEL_PAGE, ANNEX_PAGE]
 
 
 def imported_by(module: Path) -> set[str]:

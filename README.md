@@ -132,6 +132,24 @@ the language package, which has no solver in it. No data binds and nothing is
 solved to produce that page, so the math it shows is exactly what the YAML
 states, and the other pages show what the solver made of it.
 
+**Annex** is the two halves joined. Every declaration the archive holds is
+typeset in the same notation the model page uses, and under each equation is
+what the solver made of it: how many rows a constraint has, how many of them
+carry a non-zero price, and the largest price among them; what a named
+expression came to in each period; what a variable was free to choose. The
+join is [`src/showcase/annex.py`](src/showcase/annex.py), which imports no
+lpspec — the equations come from math-spec and the numbers come from the
+parquet. An annex is about one run, and any of them prints:
+
+```bash
+uv run showcase-annex carbon_cap --runs runs
+```
+
+That stitching is the whole reason
+[`fluxopt/lpspec#1648`](https://github.com/fluxopt/lpspec/issues/1648) is open:
+the typesetter renders a model, the result frames carry the answer, and holding
+one against the other is left to every caller that wants the page.
+
 Three pages know the model by name, because they tell its story. **Pathway**
 leads with four headline numbers, breaks the cost into building and running
 per technology, sets emissions against the cap, and compares two scenarios as
