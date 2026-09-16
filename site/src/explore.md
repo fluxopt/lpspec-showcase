@@ -37,5 +37,6 @@ const viewer = await pivot(client, rows, picked);
 </div>
 
 <style>
-perspective-viewer { height: 600px; }
+/* A custom element is inline by default, so it takes no height until it is told to. */
+perspective-viewer { display: block; height: 600px; }
 </style>

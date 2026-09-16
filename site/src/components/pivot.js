@@ -31,5 +31,12 @@ export async function pivot(client, rows, {kind, name, dims}) {
     aggregates: {value: "sum"},
     settings: true,
   });
-  return viewer;
+
+  // The viewer is returned inside a plain element. The site renders an
+  // interpolated value as a node only when `value instanceof value.constructor`
+  // holds, and `<perspective-viewer>` is a wasm-bindgen class for which it does
+  // not — the element would be printed as `[object HTMLElement]`.
+  const frame = document.createElement("div");
+  frame.append(viewer);
+  return frame;
 }
