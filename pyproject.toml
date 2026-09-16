@@ -22,9 +22,13 @@ dependencies = [
 solve = ["lpspec @ git+https://github.com/fluxopt/lpspec@v0.0.1-alpha.333"]
 # What the modelling-session notebook needs on top of the solve job.
 lab = ["lpspec-showcase[solve]", "marimo>=0.15", "altair>=5.4"]
+# What the solve server needs on top of the solve job. Nothing else in the
+# repository imports it, and the site builds with it absent.
+server = ["lpspec-showcase[solve]", "fastapi>=0.115", "uvicorn>=0.30", "httpx>=0.27"]
 
 [project.scripts]
 showcase-solve = "showcase.solve:main"
+showcase-serve = "server.app:main"
 
 [project.urls]
 repository = "https://github.com/fluxopt/lpspec-showcase"
@@ -38,7 +42,7 @@ dev = ["pip>=24", "pytest>=8", "ruff>=0.12"]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/showcase"]
+packages = ["src/showcase", "server"]
 
 # The notebook exported to the browser runs its cells on load, in edit mode too.
 [tool.marimo.runtime]
