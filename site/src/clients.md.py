@@ -1,9 +1,8 @@
-"""Reading the archive: what is in it, what a query gets back, and how to run one yourself.
+"""What the archive lets you ask: three questions, each one query, each crossing a boundary.
 
-A page loader, because two of its sections are facts about the directory on
-disk — the tree the solve job wrote, and the source of the two clients in
-`clients/`. Everything else on the page is a live query, run by DuckDB in the
-reader's browser against the same parquet the other pages read.
+A page loader, because the client sources at the bottom are files on disk. The
+questions themselves are live queries, run by DuckDB in the reader's browser
+against the same parquet every other page reads.
 """
 
 import os
@@ -12,36 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 runs = Path(os.environ.get('SHOWCASE_RUNS', '../runs'))
-archives = sorted(p.parent.name for p in runs.glob('*/model.yaml'))
-if not archives:
+if not any(runs.glob('*/answer/objective.parquet')):
     sys.exit(f'{runs.resolve()} holds no archive: run `showcase-solve --runs {runs}` first')
-
-run = archives[0]
-
-
-def kb(path: Path) -> str:
-    return f'{path.stat().st_size / 1024:.1f} kB'
-
-
-def tree(root: Path) -> str:
-    """The archive's shape rather than its file list: what each directory is for, and how much of it there is."""
-    answer = root / 'answer'
-    rows = [
-        ('├── model.yaml', kb(root / 'model.yaml'), 'the spec, as solved'),
-        ('├── sources.parquet', kb(root / 'sources.parquet'), '(run, source, digest)'),
-        ('├── sources/', f'{len(list((root / "sources").glob("*.parquet")))} files', 'every input, as solved'),
-        ('└── answer/', '', ''),
-        ('    ├── objective.parquet', kb(answer / 'objective.parquet'), 'one row per period: status, objective'),
-        ('    ├── metrics.parquet', kb(answer / 'metrics.parquet'), 'one row per period: size, seconds'),
-    ]
-    kinds = [d for d in ('primal', 'dual', 'expression') if (answer / d).is_dir()]
-    for index, kind in enumerate(kinds):
-        quantities = sorted(q.name for q in (answer / kind).iterdir() if q.is_dir())
-        slices = len(list((answer / kind / quantities[0]).glob('*.parquet')))
-        elbow = '    └──' if index == len(kinds) - 1 else '    ├──'
-        rows.append((f'{elbow} {kind}/', f'{len(quantities)}', f'{", ".join(quantities)} — {slices} slices each'))
-    return '\n'.join(f'{name:<28}{size:>9}   {gloss}'.rstrip() for name, size, gloss in rows)
-
 
 sources = {name: (ROOT / 'clients' / name).read_text().rstrip() for name in ('headline.py', 'headline.sql')}
 
@@ -49,84 +20,106 @@ sys.stdout.write(f"""---
 title: Clients
 sql:
   objective: ./data/runs/objective.parquet
-  metrics: ./data/runs/metrics.parquet
+  price: ./data/runs/dual/balance.parquet
+  dispatch: ./data/runs/primal/p.parquet
+  cost: ./data/runs/source/cost.parquet
   digests: ./data/runs/sources.parquet
-  total: ./data/runs/primal/total.parquet
-  emissions: ./data/runs/expression/emissions.parquet
 ---
 
-# Reading the archive
+# What the archive lets you ask
 
-Every other page here is a client. So is a DuckDB shell, a notebook, and a BI tool pointed at the directory. None of them is privileged, because **the contract is the directory, not a library** — and this page is where you learn to read it.
+Solver output is usually indexed by whatever the builder happened to name its variables, so reading it means running the builder's code. This archive is parquet keyed by **the model's own declared dimensions**, and the duals, the primals and the named expressions all come back in the same shape.
 
-Every result below is a real query, run by DuckDB in your browser against the same parquet the dashboard reads. The SQL is above each one, and you can change the last one.
+The consequence is that questions which are normally a scripting exercise become a join. Here are three, each one query, run by DuckDB in your browser.
 
-## What the solve job wrote
+## Which hours are paying for the fleet?
 
-One archive per scenario. This is `{run}`, by shape rather than by file — every quantity is its own directory of per-period slices:
+The shadow price on the energy balance is what one more MW would cost at that hour. Joining it to what was running needs a **dual and a primal in the same query**, keyed on the dimensions the model declared:
 
-```text
-runs/{run}/
-{tree(runs / run)}
-```
-
-Three kinds of thing are in there. **`model.yaml` and `sources/`** are what was solved — the spec and every input, so the run reproduces. **`answer/`** is what came back: `primal/` per variable, `dual/` per constraint, `expression/` per named quantity, one directory each. **`objective.parquet`, `metrics.parquet` and `sources.parquet`** are the record: one row per period saying how it terminated, what it cost to build and solve, and what each input's bytes digest to.
-
-## What a query gets back
-
-A value frame carries the model's own dimensions and a `value`. Nothing else, and no index:
-
-```sql id=shape
-select * from total order by run, year, generator limit 6
+```sql id=scarcity
+select p.year, p.day, p.hour, round(p.value) as price_per_mw,
+       string_agg(d.generator || ' ' || round(d.value) || ' MW', ', ' order by d.value desc) as running
+from price p join dispatch d on p.run = d.run and p.year = d.year and p.day = d.day and p.hour = d.hour
+where p.run = 'base' and p.value > 1e-9 and d.value > 1e-6
+group by p.year, p.day, p.hour, p.value
+order by p.value desc limit 5
 ```
 
 ```js
-display(Inputs.table(shape, {{maxHeight: 220}}));
+display(Inputs.table(scarcity, {{maxHeight: 210}}));
 ```
 
-Those column names — `year`, `generator` — are the model's, not this repository's. They come from the spec that was solved, which is why a reader who has never seen the model can still group by `generator`, and why two quantities keyed the same way join without a mapping table.
-
-## Three rules, one query each
-
-**The record tables carry `run` on every row**, so they concatenate across archives with a single glob and need no path parsing:
-
-```sql id=records
-select run, year, termination_condition, round(objective) as objective from objective order by run, year limit 5
+```sql id=rent
+select count(*) as hours, count(*) filter (where value > 1e-9) as priced,
+       round(100.0 * count(*) filter (where value > 1e-9) / count(*)) as pct_of_hours
+from price where run = 'base'
 ```
 
 ```js
-display(Inputs.table(records, {{maxHeight: 200}}));
+const only = rent.get(0);
+display(html`<p><b>${{only.priced}} of ${{only.hours}} hours</b> carry any price at all — ${{only.pct_of_hours}}% of them — and the three most expensive are all the summer evening, after solar has gone and gas is at its cap. Those hours are what the build decision is paying for. Nothing in the model says "peak"; it falls out of the duals.</p>`);
 ```
 
-**A value frame does not carry `run`**, because it carries the model's columns only. Reading across archives, you derive it from the path — `filename = true` in DuckDB, one `regexp_extract`. The site's loader has already done that here, which is why `run` is a column above.
+## What did the carbon cap cost?
 
-**The catalogue is the tree.** Which quantities exist and which dimensions key each is read off the directory names and the parquet schema. Nothing is declared twice:
+The record tables carry `run` on every row, so comparing scenarios needs no bookkeeping and no join key you invented:
+
+```sql id=cost_of_cap
+select run, round(sum(objective)) as pathway_cost,
+       round(sum(objective) - (select sum(objective) from objective where run = 'base')) as vs_base
+from objective group by run order by vs_base
+```
 
 ```js
-const catalogue = await FileAttachment("data/runs.zip").zip().then((z) => z.file("catalogue.json")).then((f) => f.json());
-display(Inputs.table(catalogue.map((d) => ({{kind: d.kind, name: d.name, "keyed by": d.dims.join(", ") || "nothing"}})), {{maxHeight: 260}}));
+display(Inputs.table(cost_of_cap, {{maxHeight: 180}}));
 ```
+
+## Which input moved between two runs?
+
+Every archive digests the bytes of every input it was solved with. So *what changed* is a query rather than a convention or a changelog:
+
+```sql id=moved
+select source, count(distinct digest) as distinct_bytes
+from digests where run in ('base', 'cheap_solar')
+group by source having count(distinct digest) > 1
+```
+
+```js
+display(Inputs.table(moved, {{maxHeight: 140}}));
+```
+
+One row. `cheap_solar` differs from `base` in `invest` and in nothing else, and the archive proves it rather than asserting it — which is the difference between a result you can defend and one you remember writing.
+
+## Why these are one query each
+
+Three properties, none of them about this repository:
+
+**The dimensions carry the model's own names.** `year`, `day`, `hour`, `generator` come from the spec that was solved, so a reader who has never seen the model can group by `generator`, and two quantities keyed the same way join without a mapping table.
+
+**A dual, a primal and a named expression have the same shape.** `(dims…, value)` for all three. That is why the first query above is a join rather than a script.
+
+**The spec and the digests are in the box.** `model.yaml` sits beside the answer and every input is digested, so a number can be traced to the math and the bytes that produced it.
 
 ## Run one yourself
 
-The tables above are registered; edit the query and it re-runs. `objective`, `metrics`, `digests`, `total` and `emissions` are in scope.
+`objective`, `price`, `dispatch`, `cost` and `digests` are registered. Edit and it re-runs.
 
 ```js
 const db = await DuckDBClient.of({{
   objective: FileAttachment("data/runs/objective.parquet"),
-  metrics: FileAttachment("data/runs/metrics.parquet"),
+  price: FileAttachment("data/runs/dual/balance.parquet"),
+  dispatch: FileAttachment("data/runs/primal/p.parquet"),
+  cost: FileAttachment("data/runs/source/cost.parquet"),
   digests: FileAttachment("data/runs/sources.parquet"),
-  total: FileAttachment("data/runs/primal/total.parquet"),
-  emissions: FileAttachment("data/runs/expression/emissions.parquet"),
 }});
 ```
 
 ```js
 const typed = view(Inputs.textarea({{
   label: "SQL",
-  rows: 4,
+  rows: 5,
   submit: "Run",
-  value: "select run, year, sum(value) as capacity\\nfrom total\\ngroup by run, year\\norder by run, year",
+  value: "-- what does each technology earn at those scarcity prices?\\nselect d.generator, round(sum(d.value * p.value)) as rent\\nfrom dispatch d join price p on d.run = p.run and d.year = p.year and d.day = p.day and d.hour = p.hour\\nwhere d.run = 'base'\\ngroup by d.generator order by rent desc",
 }}));
 ```
 
@@ -136,11 +129,11 @@ const answer = await db.query(typed).then((rows) => Inputs.table(rows, {{maxHeig
 display(answer);
 ```
 
-## The same thing, in your own tools
+## Away from the browser
 
-Neither of these imports lpspec, and neither imports this repository's `warehouse.py`. Both answer the four numbers the [pathway page](./) leads with, and `tests/test_clients.py` holds them to each other on every archive in the directory — so a drift between them fails CI rather than reaching this page.
+Neither of these imports lpspec, and neither imports this repository's `warehouse.py`. `tests/test_clients.py` holds them to each other on every archive in the directory.
 
-<details><summary><b>Ten lines of polars</b> — <code>uv run python clients/headline.py runs/{run}</code></summary>
+<details><summary><b>Ten lines of polars</b> — <code>uv run python clients/headline.py runs/base</code></summary>
 
 ```python
 {sources['headline.py']}
@@ -157,9 +150,6 @@ relative, so both of these matter:
 uv run showcase-solve --runs runs     # once, if runs/ is not there yet
 duckdb -c ".read clients/headline.sql"
 ```
-
-Get either wrong and the query says which one to run, rather than reporting a
-path that does not exist.
 
 ```sql
 {sources['headline.sql']}

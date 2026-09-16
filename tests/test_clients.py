@@ -7,6 +7,7 @@ page is wrong and so is the argument the repository makes.
 
 import ast
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -60,8 +61,8 @@ def test_a_scenario_that_binds_its_cap_prices_carbon(runs: Path):
     assert numbers['pathway_cost'] > 0 and 0 < numbers['zero_carbon_share'] <= 1
 
 
-def test_the_clients_page_teaches_the_archive_rather_than_printing_a_result(runs: Path):
-    """The page's job is to show the shape, the queries and the sources; the agreement is CI's job."""
+def test_the_clients_page_asks_questions_and_registers_what_answers_them(runs: Path):
+    """The page's job is three questions, each live; the agreement between the clients is CI's job."""
     done = subprocess.run(
         [sys.executable, str(ROOT / 'site' / 'src' / 'clients.md.py')],
         env={**os.environ, 'SHOWCASE_RUNS': str(runs)},
@@ -74,16 +75,17 @@ def test_the_clients_page_teaches_the_archive_rather_than_printing_a_result(runs
     )
 
     front = page.split('---')[1]
-    for table in ('objective', 'metrics', 'digests', 'total', 'emissions'):
-        assert f'{table}: ./data/runs/' in front, f'{table} is registered, so the live queries can reach it'
+    registered = {line.split(':')[0].strip() for line in front.splitlines() if line.startswith('  ')}
+    assert registered == {'objective', 'price', 'dispatch', 'cost', 'digests'}, (
+        'every table a query names is registered'
+    )
 
-    for kind in ('primal/', 'dual/', 'expression/'):
-        assert kind in page, f'the tree names {kind}, which is what the archive is made of'
-    assert 'model.yaml' in page and 'sources.parquet' in page
+    named = set(re.findall(r'```sql id=(\w+)', page))
+    assert named == {'scarcity', 'rent', 'cost_of_cap', 'moved'}, 'the three questions, and the count behind the first'
+    for table in registered:
+        assert f'{table}: FileAttachment(' in page, f'{table} is also reachable from the editable query'
 
-    assert page.count('```sql id=') == 2, 'the two record queries are live, and their SQL is shown'
-    assert 'DuckDBClient.of(' in page and 'db.query(typed)' in page, 'and the last one is editable'
-
+    assert 'join dispatch d on' in page, 'the first question joins a dual to a primal, which is the point of it'
     for source in ('def headline(run: Path)', 'union_by_name = true'):
         assert source in page, 'both client sources are printed from the files that run'
 
