@@ -14,11 +14,15 @@ sql:
 .tile-label { font-size: 0.85rem; color: var(--theme-foreground-muted); }
 .tile-value { font-size: 2rem; font-weight: 600; line-height: 1.2; margin: 0.15rem 0; }
 .tile-note { font-size: 0.85rem; color: var(--theme-foreground-muted); }
-.inputs { display: flex; flex-wrap: wrap; gap: 0.25rem 2rem; align-items: center; margin: 1rem 0; }
+/* The sliders stay in view while the charts they drive scroll under them, just below the site's own fixed header. */
+.controls { position: sticky; top: calc(var(--observablehq-header-height) + 1.5rem); z-index: 10; margin: 1rem -1rem; padding: 0.5rem 1rem; background: var(--theme-background-alt); border-bottom: 1px solid var(--theme-foreground-faintest); }
+.inputs { display: flex; flex-wrap: wrap; gap: 0.25rem 2rem; align-items: center; }
 .inputs form { width: min(100%, 420px); }
 /* The sliders step through the grid's own values, which are not numbers a text box can show; the line under them names them. */
 .inputs input[type="number"] { display: none; }
-.picked { color: var(--theme-foreground-muted); margin: -0.5rem 0 1rem; }
+.picked { color: var(--theme-foreground-muted); font-size: 0.9rem; margin: 0.25rem 0 0; max-width: none; }
+/* On a phone the two sliders stack and would pin a third of the screen, so there they scroll with the page. */
+@media (max-width: 640px) { .controls { position: static; } }
 </style>
 
 # What if the cap were tighter, or solar cheaper?
@@ -98,6 +102,7 @@ function select(d) {
 }
 ```
 
+<div class="controls">
 <div class="inputs">
 
 ```js
@@ -110,6 +115,10 @@ const solarIndex = view(solarInput);
 
 </div>
 
+<p class="picked">Showing the archive <code>${here.run}</code>: ${here.cap > reach ? "no cap" : `a cap of ${fmt.plain(here.cap)} t`} in ${last}, and solar at ${fmt.plain(here.solar)} per MW to build.</p>
+
+</div>
+
 ```js
 const here = lookup.get(`${caps[capIndex]}|${solars[solarIndex]}`);
 const uncapped = lookup.get(`${caps[0]}|${here.solar}`);
@@ -119,7 +128,6 @@ const cleanShare = d3.sum(finalFleet.filter((d) => zeroCarbon.has(d.generator)),
 const premium = here.cost / uncapped.cost - 1;
 ```
 
-<p class="picked">Showing the archive <code>${here.run}</code>: ${here.cap > reach ? "no cap" : `a cap of ${fmt.plain(here.cap)} t`} in ${last}, and solar at ${fmt.plain(here.solar)} per MW to build.</p>
 
 <div class="grid grid-cols-4">
   ${tile("Pathway cost", fmt.compact(here.cost), here === uncapped ? "annualised, summed over the periods" : `${fmt.percent(premium)} more than with no cap, at this solar cost`)}
