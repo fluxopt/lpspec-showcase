@@ -8,6 +8,8 @@ The numbers are synthetic and chosen to make the periods answer differently.
 
 from __future__ import annotations
 
+import functools
+import itertools
 import math
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -151,3 +153,30 @@ SCENARIOS: dict[str, Scenario] = {
         Scenario('carbon_cap', 'a CO2 cap that tightens every period', _carbon_cap),
     ]
 }
+
+
+#: The what-if grid: a CO2 cap on the last period, in tonnes, and a multiplier on
+#: solar's build cost in every period. ``None`` is no cap. Every point is one
+#: pathway, archived like a scenario, so a static page can answer two sliders
+#: from the archives rather than from a solver.
+GRID_CAPS = [None, 20_000.0, 17_500.0, 15_000.0, 12_500.0, 10_000.0, 7_500.0, 5_000.0, 2_500.0, 0.0]
+GRID_SOLAR = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4]
+
+
+def _point(cap: float | None, solar: float) -> dict[str, pl.DataFrame]:
+    invest = {y: {**INVEST[y], 'solar': INVEST[y]['solar'] * solar} for y in YEARS}
+    return sources(invest=invest, cap=None if cap is None else {**dict.fromkeys(YEARS, 1e12), YEARS[-1]: cap})
+
+
+def grid() -> dict[str, Scenario]:
+    """One scenario per point of the grid, named for its two inputs.
+
+    The name is only a directory name: a reader takes the cap and the solar
+    cost from the archived sources, where the solve read them.
+    """
+    points = {}
+    for cap, solar in itertools.product(GRID_CAPS, GRID_SOLAR):
+        name = f'cap-{"none" if cap is None else int(cap)}_solar-{round(solar * 100):03d}'
+        described = f'{"no cap" if cap is None else f"{cap:,.0f} t of CO2"} in {YEARS[-1]}, solar at {solar:.0%}'
+        points[name] = Scenario(name, described, functools.partial(_point, cap, solar))
+    return points

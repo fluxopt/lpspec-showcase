@@ -7,35 +7,39 @@ spec, the sources and the answer under ``<runs>/<scenario>/``.
     showcase-solve --runs runs            # every scenario
     showcase-solve --runs runs base       # one of them
     showcase-solve --runs runs --replace  # over what a previous job wrote
+    showcase-grid --runs grid             # the what-if grid, one archive per point
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import lpspec as lps
 
-from showcase.scenarios import SCENARIOS
+from showcase.scenarios import SCENARIOS, Scenario, grid
 
 MODEL = Path(__file__).parents[2] / 'models' / 'pathway.yaml'
 
 
-def solve(scenario: str, runs: Path, *, replace: bool = False) -> Path:
+def solve(scenario: str, runs: Path, *, replace: bool = False, cases: dict[str, Scenario] = SCENARIOS) -> Path:
     """Solve one scenario into ``runs/<scenario>/`` and return that directory.
 
     An archive is written whole, so a directory that already exists is refused
     unless ``replace`` is set, in which case it is removed first. Every period
     is asserted to have solved to optimality: a dashboard that quietly shows a
-    partial pathway is worse than a job that fails.
+    partial pathway is worse than a job that fails. ``cases`` is where the
+    name is looked up: the four scenarios, or the points of :func:`grid`.
     """
     target = runs / scenario
     if replace and target.exists():
         shutil.rmtree(target)
     runs_ = lps.solve_over(
         MODEL,
-        SCENARIOS[scenario].sources(),
+        cases[scenario].sources(),
         lps.EachCoordinate('year'),
         carry={'existing': 'total'},
         archive=target,
@@ -54,6 +58,30 @@ def main(argv: list[str] | None = None) -> None:
     for name in args.scenarios or list(SCENARIOS):
         target = solve(name, args.runs, replace=args.replace)
         print(f'{name}: archived at {target}')  # noqa: T201
+
+
+def _solve_point(name: str, runs: Path) -> Path:
+    return solve(name, runs, cases=grid())
+
+
+def grid_main(argv: list[str] | None = None) -> None:
+    """Solve every point of the grid, in parallel, into one directory of archives.
+
+    The same archive as a scenario's, so every reader of ``runs/`` reads this
+    directory too. ``--replace`` removes the whole directory first, so a point
+    dropped from the grid does not linger in it.
+    """
+    parser = argparse.ArgumentParser(description='solve the what-if grid and archive each point')
+    parser.add_argument('--runs', type=Path, default=Path('grid'), help='the directory the what-if page reads')
+    parser.add_argument('--replace', action='store_true', help='remove the directory first')
+    parser.add_argument('--jobs', type=int, default=os.cpu_count(), help='solves in flight at once')
+    args = parser.parse_args(argv)
+    if args.replace and args.runs.exists():
+        shutil.rmtree(args.runs)
+    names = list(grid())
+    with ProcessPoolExecutor(args.jobs) as pool:
+        done = list(pool.map(_solve_point, names, [args.runs] * len(names)))
+    print(f'{len(done)} points: archived under {args.runs}')  # noqa: T201
 
 
 if __name__ == '__main__':

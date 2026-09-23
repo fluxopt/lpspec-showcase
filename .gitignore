@@ -7,6 +7,8 @@ dist/
 .pytest_cache/
 # What the solve job writes and the dashboard reads; regenerate with `showcase-solve`.
 runs/
+# The what-if grid, the same kind of archive; regenerate with `showcase-grid`.
+grid/
 # The site: dependencies, the data-loader cache, and the build Pages serves.
 site/node_modules/
 site/dist/

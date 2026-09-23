@@ -11,10 +11,11 @@ import pytest
 
 ROOT = Path(__file__).parents[1]
 LOADER = ROOT / 'site' / 'src' / 'data' / 'runs.zip.py'
+GRID_LOADER = ROOT / 'site' / 'src' / 'data' / 'grid.zip.py'
 MODEL_PAGE = ROOT / 'site' / 'src' / 'model.md.py'
 ANNEX = ROOT / 'src' / 'showcase' / 'annex.py'
 ANNEX_PAGE = ROOT / 'site' / 'src' / 'annex.md.py'
-READERS = [ROOT / 'src' / 'showcase' / 'warehouse.py', ANNEX, LOADER, MODEL_PAGE, ANNEX_PAGE]
+READERS = [ROOT / 'src' / 'showcase' / 'warehouse.py', ANNEX, LOADER, GRID_LOADER, MODEL_PAGE, ANNEX_PAGE]
 
 
 def imported_by(module: Path) -> set[str]:
@@ -59,6 +60,36 @@ def test_the_loader_says_when_there_is_nothing_to_read(tmp_path: Path):
     )
     assert done.returncode != 0
     assert b'holds no archive' in done.stderr
+
+
+def test_the_grid_loader_ships_what_the_what_if_page_reads(grid: Path, tmp_path: Path):
+    """The grid is bundled exactly as the scenarios are, and holds the two inputs the sliders move and the dual they show."""
+    done = subprocess.run(
+        [sys.executable, str(GRID_LOADER)],
+        env={**os.environ, 'SHOWCASE_GRID': str(grid)},
+        capture_output=True,
+        check=True,
+    )
+    out = tmp_path / 'grid.zip'
+    out.write_bytes(done.stdout)
+    names = set(zipfile.ZipFile(out).namelist())
+    assert {
+        'objective.parquet',
+        'primal/total.parquet',
+        'expression/emissions.parquet',
+        'dual/carbon.parquet',
+        'source/cap.parquet',
+        'source/invest.parquet',
+        'source/rate.parquet',
+    } <= names
+
+
+def test_the_grid_loader_names_its_own_command(tmp_path: Path):
+    done = subprocess.run(
+        [sys.executable, str(GRID_LOADER)], env={**os.environ, 'SHOWCASE_GRID': str(tmp_path)}, capture_output=True
+    )
+    assert done.returncode != 0
+    assert b'showcase-grid' in done.stderr
 
 
 def test_the_model_page_typesets_what_was_solved(runs: Path):
