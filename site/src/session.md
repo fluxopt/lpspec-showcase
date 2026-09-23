@@ -8,7 +8,7 @@ The other pages are what lpspec produces unattended: a job solves, archives, and
 
 **It runs in your browser.** Python, the HiGHS solver, polars and lpspec itself load as WebAssembly, so nothing runs on a server and there is nothing to install. The first load fetches about 40 MB and takes a moment; after that every edit to the model, the data or the sliders re-solves on your machine. The code stays out of sight; edit mode, linked below, shows it and lets you change it.
 
-**It needs memory.** After a solve the tab holds about 1 GB, measured in Chromium. A desktop browser takes that in its stride; a phone browser does not, and will reload the page rather than run it.
+**It needs memory.** After a solve the tab holds about 1 GB, measured in Chromium. A desktop browser takes that in its stride; a phone browser does not, and will reload the page rather than run it. The [What if](./whatif) page answers the pathway's two sliders without any of that, from archives the job solved ahead of time.
 
 ```js
 const app = "./session-app/index.html";

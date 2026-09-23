@@ -11,9 +11,11 @@ Pages, so there is no server anywhere.
 
 ```text
 showcase-solve ──┐                                    ┌──▶ observable build ──▶ GitHub Pages
-   (lpspec)      ├──▶ runs/<scenario>/ ───────────────┤     (one Python loader)  (DuckDB-WASM
+   (lpspec)      ├──▶ runs/<scenario>/ ───────────────┤     (Python loaders)     (DuckDB-WASM
 showcase-serve ──┘      (parquet + yaml)              │                           + Plot
-   (lpspec, on request)                               └──▶ clients/, a DuckDB shell, a notebook
+   (lpspec, on request)                               ├──▶ clients/, a DuckDB shell, a notebook
+showcase-grid ─────▶ grid/<point>/ ───────────────────┘
+   (lpspec, 110 points)  (the same archive)
 ```
 
 The point of the repository is the middle box. lpspec archives a solve as tidy
@@ -31,6 +33,7 @@ lpspec is not on PyPI yet, so the `solve` extra pins it to a git tag.
 ```bash
 uv sync --all-extras
 uv run showcase-solve --runs runs       # four scenarios, four periods each, a few seconds
+uv run showcase-grid --runs grid        # the what-if grid: 110 pathways, in parallel, about ten seconds
 uv run marimo export html notebooks/session.py -o site/src/session.html
 cd site && npm ci && npm run dev        # the site, live, with the loader re-run on edit
 uv run marimo edit notebooks/session.py # the notebook, live, with a local kernel
@@ -154,6 +157,22 @@ That stitching is the whole reason
 the typesetter renders a model, the result frames carry the answer, and holding
 one against the other is left to every caller that wants the page.
 
+**What if** is the page that makes a static site feel like a solver. The
+questions the notebook's two sliders ask — a tighter CO2 cap in the last
+period, a different solar build cost — have a finite set of answers worth
+asking, so [`showcase-grid`](src/showcase/solve.py) solves all of them ahead of
+time: 10 caps by 11 solar costs, 110 pathways, 440 solves, in about ten seconds
+on a laptop. Each point is archived exactly as a scenario is, under
+`grid/<point>/`, and [`site/src/data/grid.zip.py`](site/src/data/grid.zip.py)
+bundles that directory with the same `warehouse.bundle` the scenarios use. The
+page takes each point's cap and solar cost from its archived sources, not from
+its name. Moving a slider then looks up an archive rather than solving one, so
+the page answers on a phone from about 20 KB of parquet. It draws
+the whole grid at once as two heatmaps, cost and carbon price, where a click
+moves the sliders. It also draws the cost-emissions frontier with a tangent
+whose slope is the dual of the cap: the price the solver returns is the rate
+at which cost rises as the cap tightens, read off one solve rather than two.
+
 Three pages know the model by name, because they tell its story. **Pathway**
 leads with four headline numbers, breaks the cost into building and running
 per technology, sets emissions against the cap, and compares two scenarios as
@@ -203,12 +222,15 @@ notebook as it ran at the last build, a static export, as the fallback.
   each period started from the fleet the last one left;
 - the warehouse queries name the run on every row, list the catalogue from the
   tree, and name `invest` as the one input `cheap_solar` changed;
+- every point of the what-if grid supplies the model's inputs, caps only the
+  last period, and archives the cap and solar cost the page keys it by; the
+  grid's loader ships the tables the page reads;
 - nothing past the solve job imports lpspec; the site's data loader ships every
   table the pages read, or says what is missing; and the model page prints the
   archived spec as TeX in the site's own delimiters;
 - the notebook runs top to bottom and exports with both solves optimal.
 
-CI runs the same, then the pipeline end to end: the job, then the site build.
+CI runs the same, then the pipeline end to end: the job and the grid, then the site build.
 A push to `main` also deploys the site to GitHub Pages.
 
 ## Solving on request

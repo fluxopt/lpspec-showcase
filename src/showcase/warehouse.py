@@ -7,6 +7,9 @@ row already; a value frame does not, so :func:`frame` derives it from the path.
 
 from __future__ import annotations
 
+import io
+import json
+import zipfile
 from pathlib import Path
 
 import duckdb
@@ -75,6 +78,31 @@ def changed_inputs(runs: Path, base: str, other: str) -> list[str]:
     """The sources whose bytes differ between two runs, by name."""
     digests = inputs(runs).pivot('run', index='source', values='digest')
     return digests.filter(pl.col(base) != pl.col(other))['source'].sort().to_list()
+
+
+def bundle(runs: Path) -> bytes:
+    """The whole directory as one zip: the record tables, one frame per catalogue entry across every run, the catalogue, and the model.
+
+    What the site ships, whichever directory it reads: the scenarios and the
+    what-if grid are bundled by the same call.
+    """
+
+    def parquet(table: pl.DataFrame) -> bytes:
+        buffer = io.BytesIO()
+        table.write_parquet(buffer)
+        return buffer.getvalue()
+
+    listed = catalogue(runs)
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr('objective.parquet', parquet(records(runs)))
+        zf.writestr('metrics.parquet', parquet(metrics(runs)))
+        zf.writestr('sources.parquet', parquet(inputs(runs)))
+        for row in listed.iter_rows(named=True):
+            zf.writestr(f'{row["kind"]}/{row["name"]}.parquet', parquet(frame(runs, row['kind'], row['name'])))
+        zf.writestr('catalogue.json', json.dumps(listed.to_dicts(), indent=1))
+        zf.writestr('model.yaml', next(iter(sorted(runs.glob('*/model.yaml')))).read_text())
+    return out.getvalue()
 
 
 def _union(runs: Path, member: str) -> pl.DataFrame:
