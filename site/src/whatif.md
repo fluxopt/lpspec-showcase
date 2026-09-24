@@ -32,6 +32,7 @@ Two sliders, and every position of them is a pathway the solve job has already s
 ```js
 import {colorScale, surface} from "./components/palette.js";
 import {fmt, tile, sequential} from "./components/format.js";
+import {steady} from "./components/steady.js";
 ```
 
 ```sql id=grid
@@ -140,7 +141,7 @@ const premium = here.cost / uncapped.cost - 1;
   <div class="card">
     <h2>Standing capacity, MW</h2>
     <p class="muted">The fleet this point builds, period by period. Only the last period is capped, so it is the one that changes.</p>
-    ${resize((width) => Plot.plot({
+    ${steady("fleet", (width) => Plot.plot({
       width, height: 280, marginLeft: 50,
       x: {label: null, tickFormat: "d"},
       y: {grid: true, label: "MW"},
@@ -154,7 +155,7 @@ const premium = here.cost / uncapped.cost - 1;
   <div class="card">
     <h2>CO₂ per period, t</h2>
     <p class="muted">This point, against the same solar cost with no cap. The mark in ${last} is the cap.</p>
-    ${resize((width) => {
+    ${steady("co2", (width) => {
       const rows = [
         ...co2ByYear.toArray().filter((d) => d.run === uncapped.run).map((d) => ({...d, series: "no cap"})),
         ...(here === uncapped ? [] : co2ByYear.toArray().filter((d) => d.run === here.run).map((d) => ({...d, series: "this point"}))),
@@ -200,12 +201,12 @@ function heatmap(fill, {label, type = "linear", format}, width) {
   <div class="card">
     <h2>Pathway cost, over the whole grid</h2>
     <p class="muted">Every archive at once. Click a cell to move the sliders to it.</p>
-    ${resize((width) => heatmap("cost", {label: "pathway cost", format: ",.0f"}, width))}
+    ${steady("cost", (width) => heatmap("cost", {label: "pathway cost", format: ",.0f"}, width))}
   </div>
   <div class="card">
     <h2>Carbon price in ${last}, over the whole grid</h2>
     <p class="muted">The dual of the cap, per tonne. It is zero wherever the cap does not bind, and climbs steeply for the last tonnes.</p>
-    ${resize((width) => heatmap("price", {label: "carbon price", type: "sqrt", format: ",.0f"}, width))}
+    ${steady("price", (width) => heatmap("price", {label: "carbon price", type: "sqrt", format: ",.0f"}, width))}
   </div>
 </div>
 
@@ -222,7 +223,7 @@ const tangent = [
 <div class="card">
   <h2>What cutting the last tonnes costs</h2>
   <p class="muted">Pathway cost against CO₂ in ${last}, one curve per solar cost; the one you picked is drawn, the others are grey. The dashed line through the point has the carbon price as its slope, and it touches the curve: the dual the solver returns is the rate at which cost rises as the cap tightens, read off one solve rather than two.</p>
-  ${resize((width) => Plot.plot({
+  ${steady("frontier", (width) => Plot.plot({
     width, height: 380, marginLeft: 60, marginRight: 30,
     x: {label: `CO₂ in ${last}, t`, tickFormat: "s", reverse: true, grid: true},
     y: {label: "pathway cost", tickFormat: "s", grid: true},
