@@ -8,7 +8,7 @@ const lines = (...files) => files.reduce((n, f) => n + readFileSync(new URL(f, i
 const site = readdirSync(new URL("./src", import.meta.url)).filter((f) => f.endsWith(".md") || f.endsWith(".py")).map((f) => `./src/${f}`);
 const model = lines("../models/pathway.yaml");
 const job = lines("../src/showcase/scenarios.py", "../src/showcase/solve.py", "../src/showcase/warehouse.py");
-const pages = lines(...site, "./src/data/runs.zip.py", "./src/data/grid.zip.py", "./src/perspective.css.js", "./src/perspective.js.js", "./src/components/palette.js", "./src/components/format.js", "./src/components/pivot.js");
+const pages = lines(...site, "./src/data/runs.zip.py", "./src/data/grid.zip.py", "./src/perspective.css.js", "./src/perspective.js.js", "./src/components/palette.js", "./src/components/format.js", "./src/components/pivot.js", "./src/components/steady.js");
 const notebook = lines("../notebooks/session.py");
 
 export default {
